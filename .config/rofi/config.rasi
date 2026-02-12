@@ -1,0 +1,66 @@
+* {
+    bg:          #0e1225;
+    bg-alt:      #1c2340;
+    fg:          #9ea5b8;
+    fg-bright:   #f2eae7;
+    accent:      #5570c9;
+
+    background-color: @bg;
+    text-color:       @fg;
+}
+
+window {
+    background-color: @bg;
+    border:           2px;
+    border-color:     @accent;
+    padding:          20px;
+    width:            30%;
+}
+
+inputbar {
+    background-color: @bg-alt;
+    text-color:       @fg-bright;
+    padding:          8px 12px;
+    children:         [ prompt, entry ];
+}
+
+prompt {
+    background-color: @accent;
+    text-color:       @fg-bright;
+    padding:          4px 8px;
+}
+
+entry {
+    background-color: inherit;
+    text-color:       @fg-bright;
+    padding:          4px 8px;
+}
+
+listview {
+    background-color: @bg;
+    lines:            8;
+    padding:          8px 0 0 0;
+}
+
+element {
+    padding:          6px 12px;
+    background-color: @bg;
+    text-color:       @fg;
+}
+
+element selected {
+    background-color: @accent;
+    text-color:       @fg-bright;
+}
+
+element-text {
+    background-color: inherit;
+    text-color:       inherit;
+}
+
+configuration {
+    modi: "drun,run,window";
+    kb-mode-next: "Tab";
+    kb-row-tab: "";
+    kb-element-next: "";
+}

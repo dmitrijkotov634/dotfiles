@@ -1,0 +1,118 @@
+*:backdrop {
+    background: transparent;
+    background-color: transparent;
+    background-image: none;
+    color: #e0e0e0;
+}
+
+.view, treeview, iconview, .content-view {
+    background-color: rgba(15, 15, 25, 0.3);
+}
+
+.sidebar, placessidebar {
+    background-color: rgba(15, 15, 25, 0.4);
+}
+
+* {
+    background: transparent;
+    background-color: transparent;
+    background-image: none;
+    text-shadow: none;
+    -gtk-icon-shadow: none;
+    color: #e0e0e0;
+    border: none;
+    outline: none;
+    box-shadow: none;
+}
+
+window, .background {
+    background-color: rgba(20, 20, 30, 0.65);
+}
+
+menu {
+    background-color: rgba(25, 25, 35, 0.85);
+}
+
+menubar {
+    background-color: rgba(25, 25, 35, 0.7);
+}
+
+menuitem {
+    background-color: transparent;
+}
+
+menuitem:hover {
+    background-color: rgba(70, 70, 100, 0.6);
+}
+
+row:selected, *:selected {
+    background-color: rgba(80, 80, 130, 0.6);
+    color: #ffffff;
+}
+
+row, row:hover,
+treeview row, treeview row:hover,
+iconview child, iconview child:hover,
+.view row, .view row:hover,
+list row, list row:hover {
+    background: transparent;
+    background-color: transparent;
+    background-image: none;
+}
+
+row:hover,
+treeview row:hover,
+.view row:hover,
+list row:hover {
+    background-color: rgba(70, 70, 100, 0.4);
+}
+
+toolbar, .toolbar, .pathbar {
+    background-color: rgba(25, 25, 35, 0.7);
+}
+
+button {
+    background-color: rgba(50, 50, 70, 0.5);
+}
+
+button:hover {
+    background-color: rgba(70, 70, 100, 0.6);
+}
+
+entry {
+    background-color: rgba(20, 20, 30, 0.8);
+    color: #e0e0e0;
+}
+
+scrollbar {
+    background: transparent;
+}
+
+scrollbar slider {
+    background-color: rgba(100, 100, 140, 0.4);
+    min-width: 6px;
+    min-height: 6px;
+    border-radius: 3px;
+}
+
+scrollbar slider:hover {
+    background-color: rgba(120, 120, 160, 0.6);
+}
+
+.sidebar, .sidebar row {
+    background-color: rgba(25, 25, 35, 0.5);
+}
+
+.sidebar row:hover {
+    background-color: rgba(70, 70, 100, 0.4);
+}
+
+treeview header button {
+    background-color: rgba(40, 40, 55, 0.5);
+}
+
+label, accelerator, cellview, cell {
+    background: transparent;
+    background-color: transparent;
+    background-image: none;
+}

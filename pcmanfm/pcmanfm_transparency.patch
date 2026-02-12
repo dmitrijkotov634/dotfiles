@@ -1,0 +1,2584 @@
+diff --git a/src/main-win.c b/src/main-win.c
+index 49fc53b..a8cb056 100644
+--- a/src/main-win.c
++++ b/src/main-win.c
+@@ -24,20 +24,20 @@
+ #include <config.h>
+ #endif
+ 
+-#include <glib/gi18n.h>
+ #include <gdk/gdkkeysyms.h>
++#include <glib/gi18n.h>
+ 
+-#include <unistd.h> /* for get euid */
+-#include <sys/types.h>
+ #include <ctype.h>
++#include <sys/types.h>
++#include <unistd.h> /* for get euid */
+ 
+ #include "pcmanfm.h"
+ 
+ #include "app-config.h"
++#include "connect-server.h"
+ #include "main-win.h"
+ #include "pref.h"
+ #include "tab-page.h"
+-#include "connect-server.h"
+ 
+ #include "gseal-gtk-compat.h"
+ 
+@@ -108,10 +108,14 @@ static void on_toolbar_new_tab(GtkToggleAction *act, FmMainWin *win);
+ static void on_toolbar_nav(GtkToggleAction *act, FmMainWin *win);
+ static void on_toolbar_home(GtkToggleAction *act, FmMainWin *win);
+ static void on_show_status(GtkToggleAction *action, FmMainWin *win);
+-static void on_change_mode(GtkRadioAction* act, GtkRadioAction *cur, FmMainWin* win);
+-static void on_sort_by(GtkRadioAction* act, GtkRadioAction *cur, FmMainWin* win);
+-static void on_sort_type(GtkRadioAction* act, GtkRadioAction *cur, FmMainWin* win);
+-static void on_side_pane_mode(GtkRadioAction* act, GtkRadioAction *cur, FmMainWin* win);
++static void on_change_mode(GtkRadioAction *act, GtkRadioAction *cur,
++                           FmMainWin *win);
++static void on_sort_by(GtkRadioAction *act, GtkRadioAction *cur,
++                       FmMainWin *win);
++static void on_sort_type(GtkRadioAction *act, GtkRadioAction *cur,
++                         FmMainWin *win);
++static void on_side_pane_mode(GtkRadioAction *act, GtkRadioAction *cur,
++                              FmMainWin *win);
+ static void on_about(GtkAction *act, FmMainWin *win);
+ static void on_key_nav_list(GtkAction *act, FmMainWin *win);
+ static void on_open_in_terminal(GtkAction *act, FmMainWin *win);
+@@ -130,9 +134,12 @@ static void on_size_increment(GtkAction *act, FmMainWin *win);
+ static void on_size_decrement(GtkAction *act, FmMainWin *win);
+ static void on_size_default(GtkAction *act, FmMainWin *win);
+ 
+-static void on_notebook_switch_page(GtkNotebook* nb, gpointer* page, guint num, FmMainWin* win);
+-static void on_notebook_page_added(GtkNotebook* nb, GtkWidget* page, guint num, FmMainWin* win);
+-static void on_notebook_page_removed(GtkNotebook* nb, GtkWidget* page, guint num, FmMainWin* win);
++static void on_notebook_switch_page(GtkNotebook *nb, gpointer *page, guint num,
++                                    FmMainWin *win);
++static void on_notebook_page_added(GtkNotebook *nb, GtkWidget *page, guint num,
++                                   FmMainWin *win);
++static void on_notebook_page_removed(GtkNotebook *nb, GtkWidget *page,
++                                     guint num, FmMainWin *win);
+ 
+ #include "main-win-ui.c" /* ui xml definitions and actions */
+ 
+@@ -142,8 +149,7 @@ static GtkWidget* key_nav_list_dlg = NULL;
+ 
+ static GQuark main_win_qdata;
+ 
+-static void fm_main_win_class_init(FmMainWinClass *klass)
+-{
++static void fm_main_win_class_init(FmMainWinClass *klass) {
+   GObjectClass *g_object_class = G_OBJECT_CLASS(klass);
+   GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
+ #if GTK_CHECK_VERSION(3, 0, 0)
+@@ -162,13 +168,13 @@ static void fm_main_win_class_init(FmMainWinClass *klass)
+   widget_class->scroll_event = on_scroll_event;
+   widget_class->unrealize = on_unrealize;
+ 
+-    fm_main_win_parent_class = (GtkWindowClass*)g_type_class_peek(GTK_TYPE_WINDOW);
++  fm_main_win_parent_class =
++      (GtkWindowClass *)g_type_class_peek(GTK_TYPE_WINDOW);
+ 
+   main_win_qdata = g_quark_from_static_string("FmMainWin::data");
+ }
+ 
+-static gboolean idle_focus_view(gpointer user_data)
+-{
++static gboolean idle_focus_view(gpointer user_data) {
+   FmMainWin *win = (FmMainWin *)user_data;
+   /* window might be destroyed already */
+   if (g_source_is_destroyed(g_main_current_source()))
+@@ -179,16 +185,14 @@ static gboolean idle_focus_view(gpointer user_data)
+   return FALSE;
+ }
+ 
+-static void on_location_activate(GtkEntry* entry, FmMainWin* win)
+-{
++static void on_location_activate(GtkEntry *entry, FmMainWin *win) {
+   FmPath *path = fm_path_entry_get_path(FM_PATH_ENTRY(entry));
+ 
+   /* bug #3615243 seems to be thread-related issue, let ref the path now */
+   fm_path_ref(path);
+   fm_main_win_chdir(win, path);
+   fm_path_unref(path);
+-    if (app_config->pathbar_mode_buttons)
+-    {
++  if (app_config->pathbar_mode_buttons) {
+     /* recover from Ctrl+L mode change */
+     gtk_widget_hide(GTK_WIDGET(win->location));
+     gtk_widget_hide(gtk_ui_manager_get_widget(win->ui, "/toolbar/Go"));
+@@ -211,30 +215,29 @@ static void on_location_activate(GtkEntry* entry, FmMainWin* win)
+    * priority than GtkEntry's idle function (They use G_PRIORITY_HIGH).
+    */
+   if (win->idle_handler == 0)
+-        win->idle_handler = gdk_threads_add_idle_full(G_PRIORITY_LOW, idle_focus_view, win, NULL);
++    win->idle_handler =
++        gdk_threads_add_idle_full(G_PRIORITY_LOW, idle_focus_view, win, NULL);
+ }
+ 
+-static void on_path_bar_chdir(FmPathBar *bar, FmPath *path, FmMainWin *win)
+-{
++static void on_path_bar_chdir(FmPathBar *bar, FmPath *path, FmMainWin *win) {
+   fm_main_win_chdir(win, path);
+ }
+ 
+-static void on_path_bar_mode(GtkRadioAction *act, GtkRadioAction *cur, FmMainWin *win)
+-{
++static void on_path_bar_mode(GtkRadioAction *act, GtkRadioAction *cur,
++                             FmMainWin *win) {
+   int mode = gtk_radio_action_get_current_value(cur);
+ 
+-    if (app_config->pathbar_mode_buttons != mode)
+-    {
++  if (app_config->pathbar_mode_buttons != mode) {
+     app_config->pathbar_mode_buttons = mode;
+     pcmanfm_save_config(FALSE);
+   }
+   gtk_widget_set_visible(GTK_WIDGET(win->location), mode == 0);
+-    gtk_widget_set_visible(gtk_ui_manager_get_widget(win->ui, "/toolbar/Go"), mode == 0);
++  gtk_widget_set_visible(gtk_ui_manager_get_widget(win->ui, "/toolbar/Go"),
++                         mode == 0);
+   gtk_widget_set_visible(GTK_WIDGET(win->path_bar), mode);
+ }
+ 
+-static void update_sort_menu(FmMainWin* win)
+-{
++static void update_sort_menu(FmMainWin *win) {
+   GtkAction *act;
+   FmFolderView *fv = win->folder_view;
+   GtkSortType type;
+@@ -247,7 +250,8 @@ static void update_sort_menu(FmMainWin* win)
+   win->in_update = TRUE;
+   /* we have to update this any time */
+   act = gtk_ui_manager_get_action(win->ui, "/menubar/ViewMenu/SavePerFolder");
+-    gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(act), win->current_page->own_config);
++  gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(act),
++                               win->current_page->own_config);
+   win->in_update = FALSE;
+   if (fv == NULL || fm_folder_view_get_model(fv) == NULL)
+     /* since 1.0.2 libfm have sorting only in FmFolderModel therefore
+@@ -257,18 +261,13 @@ static void update_sort_menu(FmMainWin* win)
+     return;
+   type = FM_SORT_IS_ASCENDING(mode) ? GTK_SORT_ASCENDING : GTK_SORT_DESCENDING;
+   /* we don't handle extended modes in radio actions so do that here */
+-    if(mode != win->current_page->sort_type)
+-    {
++  if (mode != win->current_page->sort_type) {
+     win->current_page->sort_type = mode;
+-        if (win->current_page->own_config)
+-        {
+-            fm_app_config_save_config_for_path(fm_folder_view_get_cwd(fv),
+-                                               mode, by, -1,
+-                                               win->current_page->show_hidden,
++    if (win->current_page->own_config) {
++      fm_app_config_save_config_for_path(fm_folder_view_get_cwd(fv), mode, by,
++                                         -1, win->current_page->show_hidden,
+                                          NULL);
+-        }
+-        else
+-        {
++    } else {
+       app_config->sort_type = mode;
+       pcmanfm_save_config(FALSE);
+     }
+@@ -288,7 +287,8 @@ static void update_sort_menu(FmMainWin* win)
+ #endif
+   gtk_radio_action_set_current_value(GTK_RADIO_ACTION(act), by);
+ #if FM_CHECK_VERSION(1, 0, 2)
+-    act = gtk_ui_manager_get_action(win->ui, "/menubar/ViewMenu/Sort/SortIgnoreCase");
++  act = gtk_ui_manager_get_action(win->ui,
++                                  "/menubar/ViewMenu/Sort/SortIgnoreCase");
+   gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(act),
+                                (mode & FM_SORT_CASE_SENSITIVE) == 0);
+ #endif
+@@ -300,8 +300,7 @@ static void update_sort_menu(FmMainWin* win)
+   win->in_update = FALSE;
+ }
+ 
+-static void update_view_menu(FmMainWin* win)
+-{
++static void update_view_menu(FmMainWin *win) {
+   GtkAction *act;
+   FmFolderView *fv = win->folder_view;
+ 
+@@ -309,14 +308,14 @@ static void update_view_menu(FmMainWin* win)
+   if (win->in_update)
+     return;
+   win->in_update = TRUE;
+-    gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(act), fm_folder_view_get_show_hidden(fv));
+-    gtk_radio_action_set_current_value(win->first_view_mode,
+-                                       fm_standard_view_get_mode(FM_STANDARD_VIEW(fv)));
++  gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(act),
++                               fm_folder_view_get_show_hidden(fv));
++  gtk_radio_action_set_current_value(
++      win->first_view_mode, fm_standard_view_get_mode(FM_STANDARD_VIEW(fv)));
+   win->in_update = FALSE;
+ }
+ 
+-static void update_file_menu(FmMainWin* win, FmPath *path)
+-{
++static void update_file_menu(FmMainWin *win, FmPath *path) {
+   GtkAction *act;
+   /* FmFolderView *fv = win->folder_view; */
+   gboolean can_term = pcmanfm_can_open_path_in_terminal(path);
+@@ -331,15 +330,14 @@ static void update_file_menu(FmMainWin* win, FmPath *path)
+   gtk_action_set_sensitive(act, path && fm_path_get_parent(path));
+ }
+ 
+-static void on_folder_view_sort_changed(FmFolderView* fv, FmMainWin* win)
+-{
++static void on_folder_view_sort_changed(FmFolderView *fv, FmMainWin *win) {
+   if (fv != win->folder_view)
+     return;
+   update_sort_menu(win);
+ }
+ 
+-static void on_folder_view_sel_changed(FmFolderView* fv, gint n_sel, FmMainWin* win)
+-{
++static void on_folder_view_sel_changed(FmFolderView *fv, gint n_sel,
++                                       FmMainWin *win) {
+   GtkAction *act;
+   gboolean has_selected = n_sel > 0;
+ 
+@@ -369,8 +367,7 @@ static void on_folder_view_sel_changed(FmFolderView* fv, gint n_sel, FmMainWin*
+      and also because GIO doesn't support changing the .desktop files
+      display names, therefore we have to disable it in some cases */
+   has_selected = FALSE;
+-    if (n_sel == 1)
+-    {
++  if (n_sel == 1) {
+     FmFileInfoList *files = fm_folder_view_dup_selected_files(fv);
+     FmFileInfo *fi = fm_file_info_list_peek_head(files);
+ #if FM_CHECK_VERSION(1, 2, 0)
+@@ -384,10 +381,9 @@ static void on_folder_view_sel_changed(FmFolderView* fv, gint n_sel, FmMainWin*
+   gtk_action_set_sensitive(act, has_selected);
+ }
+ 
+-static gboolean on_view_key_press_event(FmFolderView* fv, GdkEventKey* evt, FmMainWin* win)
+-{
+-    switch(evt->keyval)
+-    {
++static gboolean on_view_key_press_event(FmFolderView *fv, GdkEventKey *evt,
++                                        FmMainWin *win) {
++  switch (evt->keyval) {
+   case GDK_KEY_BackSpace:
+     on_go_up(NULL, win);
+     break;
+@@ -395,11 +391,9 @@ static gboolean on_view_key_press_event(FmFolderView* fv, GdkEventKey* evt, FmMa
+   return FALSE;
+ }
+ 
+-static void on_bookmark(GtkMenuItem* mi, FmMainWin* win)
+-{
++static void on_bookmark(GtkMenuItem *mi, FmMainWin *win) {
+   FmPath *path = (FmPath *)g_object_get_qdata(G_OBJECT(mi), main_win_qdata);
+-    switch(app_config->bm_open_method)
+-    {
++  switch (app_config->bm_open_method) {
+   case FM_OPEN_IN_CURRENT_TAB: /* current tab */
+     fm_main_win_chdir(win, path);
+     break;
+@@ -412,8 +406,7 @@ static void on_bookmark(GtkMenuItem* mi, FmMainWin* win)
+   }
+ }
+ 
+-static void create_bookmarks_menu(FmMainWin* win)
+-{
++static void create_bookmarks_menu(FmMainWin *win) {
+   const GList *list, *l;
+   GtkWidget *mi;
+   int i = 0;
+@@ -423,13 +416,13 @@ static void create_bookmarks_menu(FmMainWin* win)
+ #else
+   list = fm_bookmarks_list_all(win->bookmarks);
+ #endif
+-    for(l=list;l;l=l->next)
+-    {
++  for (l = list; l; l = l->next) {
+     FmBookmarkItem *item = (FmBookmarkItem *)l->data;
+     mi = gtk_image_menu_item_new_with_label(item->name);
+     gtk_widget_show(mi);
+     g_object_set_qdata_full(G_OBJECT(mi), main_win_qdata,
+-                                fm_path_ref(item->path), (GDestroyNotify)fm_path_unref);
++                            fm_path_ref(item->path),
++                            (GDestroyNotify)fm_path_unref);
+     g_signal_connect(mi, "activate", G_CALLBACK(on_bookmark), win);
+     gtk_menu_shell_insert(win->bookmarks_menu, mi, i);
+     ++i;
+@@ -437,29 +430,23 @@ static void create_bookmarks_menu(FmMainWin* win)
+ #if FM_CHECK_VERSION(1, 0, 2)
+   g_list_free_full((GList *)list, (GDestroyNotify)fm_bookmark_item_unref);
+ #endif
+-    if(i > 0)
+-    {
++  if (i > 0) {
+     mi = gtk_separator_menu_item_new();
+     gtk_widget_show(mi);
+     gtk_menu_shell_insert(win->bookmarks_menu, mi, i);
+   }
+ }
+ 
+-static void on_bookmarks_changed(FmBookmarks* bm, FmMainWin* win)
+-{
++static void on_bookmarks_changed(FmBookmarks *bm, FmMainWin *win) {
+   /* delete old items first. */
+   GList *mis = gtk_container_get_children(GTK_CONTAINER(win->bookmarks_menu));
+   GList *l;
+-    for(l = mis;l;l=l->next)
+-    {
++  for (l = mis; l; l = l->next) {
+     GtkWidget *item = (GtkWidget *)l->data;
+-        if( g_object_get_qdata(G_OBJECT(item), main_win_qdata) )
+-        {
++    if (g_object_get_qdata(G_OBJECT(item), main_win_qdata)) {
+       g_signal_handlers_disconnect_by_func(item, on_bookmark, win);
+       gtk_widget_destroy(item);
+-        }
+-        else
+-        {
++    } else {
+       if (GTK_IS_SEPARATOR_MENU_ITEM(item))
+         gtk_widget_destroy(item);
+       break;
+@@ -470,20 +457,20 @@ static void on_bookmarks_changed(FmBookmarks* bm, FmMainWin* win)
+   create_bookmarks_menu(win);
+ }
+ 
+-static void load_bookmarks(FmMainWin* win, GtkUIManager* ui)
+-{
++static void load_bookmarks(FmMainWin *win, GtkUIManager *ui) {
+   GtkWidget *mi = gtk_ui_manager_get_widget(ui, "/menubar/BookmarksMenu");
+-    win->bookmarks_menu = GTK_MENU_SHELL(gtk_menu_item_get_submenu(GTK_MENU_ITEM(mi)));
++  win->bookmarks_menu =
++      GTK_MENU_SHELL(gtk_menu_item_get_submenu(GTK_MENU_ITEM(mi)));
+   win->bookmarks = fm_bookmarks_dup();
+-    g_signal_connect(win->bookmarks, "changed", G_CALLBACK(on_bookmarks_changed), win);
++  g_signal_connect(win->bookmarks, "changed", G_CALLBACK(on_bookmarks_changed),
++                   win);
+ 
+   create_bookmarks_menu(win);
+ }
+ 
+ static void _update_hist_buttons(FmMainWin *win);
+ 
+-static void on_history_item(GtkMenuItem* mi, FmMainWin* win)
+-{
++static void on_history_item(GtkMenuItem *mi, FmMainWin *win) {
+   FmTabPage *page = win->current_page;
+ #if FM_CHECK_VERSION(1, 0, 2)
+   guint l = GPOINTER_TO_UINT(g_object_get_qdata(G_OBJECT(mi), main_win_qdata));
+@@ -494,14 +481,12 @@ static void on_history_item(GtkMenuItem* mi, FmMainWin* win)
+   _update_hist_buttons(win);
+ }
+ 
+-static void disconnect_history_item(GtkWidget* mi, gpointer win)
+-{
++static void disconnect_history_item(GtkWidget *mi, gpointer win) {
+   g_signal_handlers_disconnect_by_func(mi, on_history_item, win);
+   gtk_widget_destroy(mi);
+ }
+ 
+-static void on_history_selection_done(GtkMenuShell* menu, gpointer win)
+-{
++static void on_history_selection_done(GtkMenuShell *menu, gpointer win) {
+   g_debug("history selection done");
+   g_signal_handlers_disconnect_by_func(menu, on_history_selection_done, NULL);
+   /* cleanup: disconnect and delete all items */
+@@ -528,14 +513,13 @@ static void on_show_history_menu(GtkMenuToolButton* btn, FmMainWin* win)
+ #endif
+ 
+   /* delete old items */
+-    gtk_container_foreach(GTK_CONTAINER(menu), (GtkCallback)gtk_widget_destroy, NULL);
++  gtk_container_foreach(GTK_CONTAINER(menu), (GtkCallback)gtk_widget_destroy,
++                        NULL);
+ 
+ #if FM_CHECK_VERSION(1, 0, 2)
+-    for (i = 0; (path = fm_nav_history_get_nth_path(win->nav_history, i)); i++)
+-    {
++  for (i = 0; (path = fm_nav_history_get_nth_path(win->nav_history, i)); i++) {
+ #else
+-    for(l = fm_nav_history_list(win->nav_history); l; l=l->next)
+-    {
++  for (l = fm_nav_history_list(win->nav_history); l; l = l->next) {
+     const FmNavHistoryItem *item = (FmNavHistoryItem *)l->data;
+     FmPath *path = item->path;
+ #endif
+@@ -550,8 +534,7 @@ static void on_show_history_menu(GtkMenuToolButton* btn, FmMainWin* win)
+       mi = gtk_check_menu_item_new_with_label(str);
+       gtk_check_menu_item_set_draw_as_radio(GTK_CHECK_MENU_ITEM(mi), TRUE);
+       gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(mi), TRUE);
+-        }
+-        else
++    } else
+       mi = gtk_menu_item_new_with_label(str);
+     g_free(str);
+ 
+@@ -563,12 +546,13 @@ static void on_show_history_menu(GtkMenuToolButton* btn, FmMainWin* win)
+     g_signal_connect(mi, "activate", G_CALLBACK(on_history_item), win);
+     gtk_menu_shell_append(menu, mi);
+   }
+-    g_signal_connect(menu, "selection-done", G_CALLBACK(on_history_selection_done), NULL);
++  g_signal_connect(menu, "selection-done",
++                   G_CALLBACK(on_history_selection_done), NULL);
+   gtk_widget_show_all(GTK_WIDGET(menu));
+ }
+ 
+-static void on_tab_page_splitter_pos_changed(GtkPaned* paned, GParamSpec* ps, FmMainWin* win)
+-{
++static void on_tab_page_splitter_pos_changed(GtkPaned *paned, GParamSpec *ps,
++                                             FmMainWin *win) {
+   GList *children, *child;
+   if (paned != (GtkPaned *)win->current_page)
+     return;
+@@ -577,10 +561,10 @@ static void on_tab_page_splitter_pos_changed(GtkPaned* paned, GParamSpec* ps, Fm
+   pcmanfm_save_config(FALSE);
+ 
+   /* apply the pos to all other pages as well */
+-    /* TODO: maybe we should allow different splitter pos for different pages later? */
++  /* TODO: maybe we should allow different splitter pos for different pages
++   * later? */
+   children = gtk_container_get_children(GTK_CONTAINER(win->notebook));
+-    for(child = children; child; child = child->next)
+-    {
++  for (child = children; child; child = child->next) {
+     FmTabPage *page = FM_TAB_PAGE(child->data);
+     if ((GtkPaned *)page != paned)
+       gtk_paned_set_position(GTK_PANED(page), app_config->splitter_pos);
+@@ -589,8 +573,8 @@ static void on_tab_page_splitter_pos_changed(GtkPaned* paned, GParamSpec* ps, Fm
+ }
+ 
+ /* This callback is only connected to side pane of current active tab page. */
+-static void on_side_pane_chdir(FmSidePane* sp, guint button, FmPath* path, FmMainWin* win)
+-{
++static void on_side_pane_chdir(FmSidePane *sp, guint button, FmPath *path,
++                               FmMainWin *win) {
+   if (sp != win->side_pane)
+     return;
+ 
+@@ -604,8 +588,7 @@ static void on_side_pane_chdir(FmSidePane* sp, guint button, FmPath* path, FmMai
+     /* the side pane activates row itself so let reset it back */
+     if (prev_path)
+       fm_side_pane_chdir(sp, prev_path);
+-    }
+-    else
++  } else
+     fm_main_win_chdir(win, path);
+ 
+   /* bug #3531696: search is done on side pane instead of folder view */
+@@ -614,8 +597,7 @@ static void on_side_pane_chdir(FmSidePane* sp, guint button, FmPath* path, FmMai
+ }
+ 
+ /* This callback is only connected to side pane of current active tab page. */
+-static void on_side_pane_mode_changed(FmSidePane* sp, FmMainWin* win)
+-{
++static void on_side_pane_mode_changed(FmSidePane *sp, FmMainWin *win) {
+   FmSidePaneMode mode;
+ 
+   if (sp != win->side_pane)
+@@ -626,24 +608,22 @@ static void on_side_pane_mode_changed(FmSidePane* sp, FmMainWin* win)
+   /* update menu */
+   gtk_radio_action_set_current_value(win->first_side_pane_mode, mode);
+ 
+-    if(mode != (app_config->side_pane_mode & FM_SP_MODE_MASK))
+-    {
+-        app_config->side_pane_mode = mode | (app_config->side_pane_mode & ~FM_SP_MODE_MASK);
++  if (mode != (app_config->side_pane_mode & FM_SP_MODE_MASK)) {
++    app_config->side_pane_mode =
++        mode | (app_config->side_pane_mode & ~FM_SP_MODE_MASK);
+     fm_config_emit_changed(FM_CONFIG(app_config), "side_pane_mode");
+     pcmanfm_save_config(FALSE);
+   }
+ }
+ 
+-static void on_always_show_tabs_changed(FmAppConfig *cfg, FmMainWin *win)
+-{
++static void on_always_show_tabs_changed(FmAppConfig *cfg, FmMainWin *win) {
+   /* it will affect only the case when window has exactly 1 tab,
+      all other cases will be handled when tab is added or removed */
+   if (gtk_notebook_get_n_pages(win->notebook) == 1)
+     gtk_notebook_set_show_tabs(win->notebook, app_config->always_show_tabs);
+ }
+ 
+-static void on_toolsbar_changed(FmAppConfig *cfg, FmMainWin *win)
+-{
++static void on_toolsbar_changed(FmAppConfig *cfg, FmMainWin *win) {
+   GtkAction *act;
+   GtkWidget *toolitem;
+   int n;
+@@ -654,21 +634,31 @@ static void on_toolsbar_changed(FmAppConfig *cfg, FmMainWin *win)
+   win->in_update = TRUE; /* avoid recursion */
+   active = cfg->tb.visible;
+   gtk_widget_set_visible(GTK_WIDGET(win->toolbar), active);
+-    act = gtk_ui_manager_get_action(win->ui, "/menubar/ViewMenu/Toolbar/ToolbarNewWin");
++  act = gtk_ui_manager_get_action(win->ui,
++                                  "/menubar/ViewMenu/Toolbar/ToolbarNewWin");
+   gtk_action_set_sensitive(act, active);
+-    if (gtk_toggle_action_get_active(GTK_TOGGLE_ACTION(act)) != app_config->tb.new_win)
+-        gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(act), app_config->tb.new_win);
+-    act = gtk_ui_manager_get_action(win->ui, "/menubar/ViewMenu/Toolbar/ToolbarNewTab");
++  if (gtk_toggle_action_get_active(GTK_TOGGLE_ACTION(act)) !=
++      app_config->tb.new_win)
++    gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(act),
++                                 app_config->tb.new_win);
++  act = gtk_ui_manager_get_action(win->ui,
++                                  "/menubar/ViewMenu/Toolbar/ToolbarNewTab");
+   gtk_action_set_sensitive(act, active);
+-    if (gtk_toggle_action_get_active(GTK_TOGGLE_ACTION(act)) != app_config->tb.new_tab)
+-        gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(act), app_config->tb.new_tab);
+-    act = gtk_ui_manager_get_action(win->ui, "/menubar/ViewMenu/Toolbar/ToolbarNav");
++  if (gtk_toggle_action_get_active(GTK_TOGGLE_ACTION(act)) !=
++      app_config->tb.new_tab)
++    gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(act),
++                                 app_config->tb.new_tab);
++  act = gtk_ui_manager_get_action(win->ui,
++                                  "/menubar/ViewMenu/Toolbar/ToolbarNav");
+   gtk_action_set_sensitive(act, active);
+-    if (gtk_toggle_action_get_active(GTK_TOGGLE_ACTION(act)) != app_config->tb.nav)
++  if (gtk_toggle_action_get_active(GTK_TOGGLE_ACTION(act)) !=
++      app_config->tb.nav)
+     gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(act), app_config->tb.nav);
+-    act = gtk_ui_manager_get_action(win->ui, "/menubar/ViewMenu/Toolbar/ToolbarHome");
++  act = gtk_ui_manager_get_action(win->ui,
++                                  "/menubar/ViewMenu/Toolbar/ToolbarHome");
+   gtk_action_set_sensitive(act, active);
+-    if (gtk_toggle_action_get_active(GTK_TOGGLE_ACTION(act)) != app_config->tb.home)
++  if (gtk_toggle_action_get_active(GTK_TOGGLE_ACTION(act)) !=
++      app_config->tb.home)
+     gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(act), app_config->tb.home);
+   if (active) /* it it's hidden no reason to update its children */
+   {
+@@ -694,8 +684,7 @@ static void on_toolsbar_changed(FmAppConfig *cfg, FmMainWin *win)
+   win->in_update = FALSE;
+ }
+ 
+-static void on_statusbar_changed(FmAppConfig *cfg, FmMainWin *win)
+-{
++static void on_statusbar_changed(FmAppConfig *cfg, FmMainWin *win) {
+   gtk_widget_set_visible(GTK_WIDGET(win->statusbar), cfg->show_statusbar);
+   update_statusbar(win);
+ }
+@@ -703,17 +692,16 @@ static void on_statusbar_changed(FmAppConfig *cfg, FmMainWin *win)
+ static gboolean settings_hack_done = FALSE;
+ static gint old_gtk_timeout_expand = 0;
+ 
+-static void on_change_tab_on_drop_changed(FmAppConfig *cfg, gpointer _unused)
+-{
++static void on_change_tab_on_drop_changed(FmAppConfig *cfg, gpointer _unused) {
+   if (app_config->change_tab_on_drop)
+     g_object_set(gtk_settings_get_default(), "gtk-timeout-expand",
+                  old_gtk_timeout_expand, NULL);
+   else
+-        g_object_set(gtk_settings_get_default(), "gtk-timeout-expand", 600000, NULL);
++    g_object_set(gtk_settings_get_default(), "gtk-timeout-expand", 600000,
++                 NULL);
+ }
+ 
+-static void _do_settings_hack(void)
+-{
++static void _do_settings_hack(void) {
+   GtkSettings *settings;
+ 
+   if (settings_hack_done)
+@@ -729,8 +717,7 @@ static void _do_settings_hack(void)
+                    G_CALLBACK(on_change_tab_on_drop_changed), NULL);
+ }
+ 
+-static void fm_main_win_init(FmMainWin *win)
+-{
++static void fm_main_win_init(FmMainWin *win) {
+   GtkBox *vbox;
+   GtkWidget *menubar;
+   GtkBox *pathbox;
+@@ -751,6 +738,14 @@ static void fm_main_win_init(FmMainWin *win)
+ #endif
+   GtkShadowType shadow_type;
+ 
++  {
++    GdkScreen *screen = gtk_widget_get_screen(GTK_WIDGET(win));
++    GdkVisual *visual = gdk_screen_get_rgba_visual(screen);
++    if (visual)
++      gtk_widget_set_visual(GTK_WIDGET(win), visual);
++  }
++  gtk_widget_set_app_paintable(GTK_WIDGET(win), TRUE);
++
+   pcmanfm_ref();
+   all_wins = g_slist_prepend(all_wins, win);
+ 
+@@ -769,35 +764,35 @@ static void fm_main_win_init(FmMainWin *win)
+   ui = gtk_ui_manager_new();
+   act_grp = gtk_action_group_new("Main");
+   gtk_action_group_set_translation_domain(act_grp, NULL);
+-    gtk_action_group_add_actions(act_grp, main_win_actions, G_N_ELEMENTS(main_win_actions), win);
++  gtk_action_group_add_actions(act_grp, main_win_actions,
++                               G_N_ELEMENTS(main_win_actions), win);
+   gtk_action_group_add_toggle_actions(act_grp, main_win_toggle_actions,
+-                                        G_N_ELEMENTS(main_win_toggle_actions), win);
++                                      G_N_ELEMENTS(main_win_toggle_actions),
++                                      win);
+ #if FM_CHECK_VERSION(1, 2, 0)
+   /* generate list of modes dynamically from FmStandardView widget data */
+   radio_group = NULL;
+   is_first = TRUE;
+   str = g_string_new("ViewMode:");
+-    xml = g_string_new("<menubar><menu action='ViewMenu'><menu action='FolderView'><placeholder name='ViewModes'>");
++  xml = g_string_new("<menubar><menu action='ViewMenu'><menu "
++                     "action='FolderView'><placeholder name='ViewModes'>");
+   accel_str[6] = '1';
+-    for(i = 0; i < fm_standard_view_get_n_modes(); i++)
+-    {
+-        if(fm_standard_view_get_mode_label(i))
+-        {
++  for (i = 0; i < fm_standard_view_get_n_modes(); i++) {
++    if (fm_standard_view_get_mode_label(i)) {
+       g_string_append(str, fm_standard_view_mode_to_str(i));
+-            mode_action = gtk_radio_action_new(str->str,
+-                                               fm_standard_view_get_mode_label(i),
++      mode_action =
++          gtk_radio_action_new(str->str, fm_standard_view_get_mode_label(i),
+                                fm_standard_view_get_mode_tooltip(i),
+-                                               fm_standard_view_get_mode_icon(i),
+-                                               i);
++                               fm_standard_view_get_mode_icon(i), i);
+       gtk_radio_action_set_group(mode_action, radio_group);
+       radio_group = gtk_radio_action_get_group(mode_action);
+-            gtk_action_group_add_action_with_accel(act_grp,
+-                                                   GTK_ACTION(mode_action),
++      gtk_action_group_add_action_with_accel(act_grp, GTK_ACTION(mode_action),
+                                              accel_str);
+       if (is_first) /* work on first one only */
+       {
+         win->first_view_mode = mode_action;
+-                g_signal_connect(mode_action, "changed", G_CALLBACK(on_change_mode), win);
++        g_signal_connect(mode_action, "changed", G_CALLBACK(on_change_mode),
++                         win);
+       }
+       is_first = FALSE;
+       g_object_unref(mode_action);
+@@ -806,51 +801,49 @@ static void fm_main_win_init(FmMainWin *win)
+       g_string_truncate(str, 9); /* reset it to just "ViewMode:" */
+     }
+   }
+-    g_string_append(xml, "</placeholder></menu>"); /* it will be continued below */
++  g_string_append(xml,
++                  "</placeholder></menu>"); /* it will be continued below */
+ #else
+-    gtk_action_group_add_radio_actions(act_grp, main_win_mode_actions,
+-                                       G_N_ELEMENTS(main_win_mode_actions),
+-                                       app_config->view_mode,
+-                                       G_CALLBACK(on_change_mode), win);
++  gtk_action_group_add_radio_actions(
++      act_grp, main_win_mode_actions, G_N_ELEMENTS(main_win_mode_actions),
++      app_config->view_mode, G_CALLBACK(on_change_mode), win);
+ #endif
+   gtk_action_group_add_radio_actions(act_grp, main_win_sort_type_actions,
+                                      G_N_ELEMENTS(main_win_sort_type_actions),
+ #if FM_CHECK_VERSION(1, 0, 2)
+-                                       FM_SORT_IS_ASCENDING(app_config->sort_type) ? GTK_SORT_ASCENDING : GTK_SORT_DESCENDING,
++                                     FM_SORT_IS_ASCENDING(app_config->sort_type)
++                                         ? GTK_SORT_ASCENDING
++                                         : GTK_SORT_DESCENDING,
+ #else
+                                      app_config->sort_type,
+ #endif
+                                      G_CALLBACK(on_sort_type), win);
+-    gtk_action_group_add_radio_actions(act_grp, main_win_sort_by_actions,
+-                                       G_N_ELEMENTS(main_win_sort_by_actions),
+-                                       app_config->sort_by,
+-                                       G_CALLBACK(on_sort_by), win);
++  gtk_action_group_add_radio_actions(
++      act_grp, main_win_sort_by_actions, G_N_ELEMENTS(main_win_sort_by_actions),
++      app_config->sort_by, G_CALLBACK(on_sort_by), win);
+ #if FM_CHECK_VERSION(1, 2, 0)
+   /* generate list of modes dynamically from FmSidePane widget data */
+   radio_group = NULL;
+   is_first = TRUE;
+   g_string_assign(str, "SidePaneMode:");
+-    g_string_append(xml, "<menu action='SidePane'><placeholder name='SidePaneModes'>");
++  g_string_append(xml,
++                  "<menu action='SidePane'><placeholder name='SidePaneModes'>");
+   accel_str[6] = '6';
+-    for(i = 1; i <= fm_side_pane_get_n_modes(); i++)
+-    {
+-        if(fm_side_pane_get_mode_label(i))
+-        {
++  for (i = 1; i <= fm_side_pane_get_n_modes(); i++) {
++    if (fm_side_pane_get_mode_label(i)) {
+       g_string_append(str, fm_side_pane_get_mode_name(i));
+-            mode_action = gtk_radio_action_new(str->str,
+-                                               fm_side_pane_get_mode_label(i),
+-                                               fm_side_pane_get_mode_tooltip(i),
+-                                               NULL,
+-                                               i);
++      mode_action =
++          gtk_radio_action_new(str->str, fm_side_pane_get_mode_label(i),
++                               fm_side_pane_get_mode_tooltip(i), NULL, i);
+       gtk_radio_action_set_group(mode_action, radio_group);
+       radio_group = gtk_radio_action_get_group(mode_action);
+-            gtk_action_group_add_action_with_accel(act_grp,
+-                                                   GTK_ACTION(mode_action),
++      gtk_action_group_add_action_with_accel(act_grp, GTK_ACTION(mode_action),
+                                              accel_str);
+       if (is_first) /* work on first one only */
+       {
+         win->first_side_pane_mode = mode_action;
+-                g_signal_connect(mode_action, "changed", G_CALLBACK(on_side_pane_mode), win);
++        g_signal_connect(mode_action, "changed", G_CALLBACK(on_side_pane_mode),
++                         win);
+       }
+       is_first = FALSE;
+       g_object_unref(mode_action);
+@@ -859,19 +852,22 @@ static void fm_main_win_init(FmMainWin *win)
+       g_string_truncate(str, 13); /* reset it to just "SidePaneMode:" */
+     }
+   }
+-    gtk_radio_action_set_current_value(win->first_side_pane_mode,
++  gtk_radio_action_set_current_value(
++      win->first_side_pane_mode,
+       (app_config->side_pane_mode & FM_SP_MODE_MASK));
+   g_string_append(xml, "</placeholder></menu></menu></menubar>");
+   g_string_free(str, TRUE);
+ #else
+-    gtk_action_group_add_radio_actions(act_grp, main_win_side_bar_mode_actions,
++  gtk_action_group_add_radio_actions(
++      act_grp, main_win_side_bar_mode_actions,
+       G_N_ELEMENTS(main_win_side_bar_mode_actions),
+       (app_config->side_pane_mode & FM_SP_MODE_MASK),
+       G_CALLBACK(on_side_pane_mode), win);
+ #endif
+-    gtk_action_group_add_radio_actions(act_grp, main_win_path_bar_mode_actions,
+-                                       G_N_ELEMENTS(main_win_path_bar_mode_actions),
+-                                       0, G_CALLBACK(on_path_bar_mode), win);
++  gtk_action_group_add_radio_actions(
++      act_grp, main_win_path_bar_mode_actions,
++      G_N_ELEMENTS(main_win_path_bar_mode_actions), 0,
++      G_CALLBACK(on_path_bar_mode), win);
+ 
+   accel_grp = gtk_ui_manager_get_accel_group(ui);
+   gtk_window_add_accel_group(GTK_WINDOW(win), accel_grp);
+@@ -894,20 +890,19 @@ static void fm_main_win_init(FmMainWin *win)
+      is available only in 1.0.2 so just hide it */
+   gtk_action_set_visible(act, FALSE);
+ #endif
+-    act = gtk_ui_manager_get_action(ui, "/menubar/ViewMenu/SidePane/ShowSidePane");
++  act =
++      gtk_ui_manager_get_action(ui, "/menubar/ViewMenu/SidePane/ShowSidePane");
+   gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(act),
+                                (app_config->side_pane_mode & FM_SP_HIDE) == 0);
+ 
+ #if FM_CHECK_VERSION(1, 2, 0)
+   /* disable "Find Files" button if module isn't available */
+-    if (!fm_module_is_in_use("vfs", "search"))
+-    {
++  if (!fm_module_is_in_use("vfs", "search")) {
+     act = gtk_ui_manager_get_action(ui, "/menubar/ToolMenu/Search");
+     gtk_action_set_sensitive(act, FALSE);
+   }
+   /* disable "Applications" button if module isn't available */
+-    if (!fm_module_is_in_use("vfs", "menu"))
+-    {
++  if (!fm_module_is_in_use("vfs", "menu")) {
+     act = gtk_ui_manager_get_action(ui, "/menubar/GoMenu/Apps");
+     gtk_action_set_sensitive(act, FALSE);
+   }
+@@ -935,13 +930,16 @@ static void fm_main_win_init(FmMainWin *win)
+   win->history_menu = gtk_menu_new();
+ #if FM_CHECK_VERSION(1, 2, 0)
+   fm_menu_tool_item_set_menu(FM_MENU_TOOL_ITEM(toolitem), win->history_menu);
+-    gtk_tool_item_set_tooltip_text(toolitem, _("Show history of visited folders"));
+-#else
+-    gtk_menu_tool_button_set_menu(GTK_MENU_TOOL_BUTTON(toolitem), win->history_menu);
+-    gtk_menu_tool_button_set_arrow_tooltip_text(GTK_MENU_TOOL_BUTTON(toolitem),
++  gtk_tool_item_set_tooltip_text(toolitem,
+                                  _("Show history of visited folders"));
++#else
++  gtk_menu_tool_button_set_menu(GTK_MENU_TOOL_BUTTON(toolitem),
++                                win->history_menu);
++  gtk_menu_tool_button_set_arrow_tooltip_text(
++      GTK_MENU_TOOL_BUTTON(toolitem), _("Show history of visited folders"));
+ #endif
+-    g_signal_connect(toolitem, "show-menu", G_CALLBACK(on_show_history_menu), win);
++  g_signal_connect(toolitem, "show-menu", G_CALLBACK(on_show_history_menu),
++                   win);
+   atk_obj = gtk_widget_get_accessible(GTK_WIDGET(toolitem));
+   if (atk_obj)
+     atk_object_set_name(atk_obj, _("History"));
+@@ -954,10 +952,12 @@ static void fm_main_win_init(FmMainWin *win)
+ 
+   /* the location bar */
+   win->location = fm_path_entry_new();
+-    g_signal_connect(win->location, "activate", G_CALLBACK(on_location_activate), win);
++  g_signal_connect(win->location, "activate", G_CALLBACK(on_location_activate),
++                   win);
+   if (geteuid() == 0) /* if we're using root, Give the user some warnings */
+   {
+-        GtkWidget* warning = gtk_image_new_from_stock(GTK_STOCK_DIALOG_WARNING, GTK_ICON_SIZE_SMALL_TOOLBAR);
++    GtkWidget *warning = gtk_image_new_from_stock(GTK_STOCK_DIALOG_WARNING,
++                                                  GTK_ICON_SIZE_SMALL_TOOLBAR);
+     gtk_widget_set_tooltip_markup(warning, _("You are in super user mode"));
+ 
+     toolitem = gtk_tool_item_new();
+@@ -976,7 +976,8 @@ static void fm_main_win_init(FmMainWin *win)
+   toolitem = (GtkToolItem *)gtk_tool_item_new();
+   gtk_container_add(GTK_CONTAINER(toolitem), GTK_WIDGET(pathbox));
+   gtk_tool_item_set_expand(toolitem, TRUE);
+-    gtk_toolbar_insert(win->toolbar, toolitem, gtk_toolbar_get_n_items(win->toolbar) - 1);
++  gtk_toolbar_insert(win->toolbar, toolitem,
++                     gtk_toolbar_get_n_items(win->toolbar) - 1);
+   g_signal_connect(app_config, "changed::toolsbar",
+                    G_CALLBACK(on_toolsbar_changed), win);
+ 
+@@ -992,9 +993,12 @@ static void fm_main_win_init(FmMainWin *win)
+    * handler of 'switch-page' signal. The current page is changed to the new one
+    * after the signal is emitted. So before the default handler is finished,
+    * current page is still the old one. */
+-    g_signal_connect_after(win->notebook, "switch-page", G_CALLBACK(on_notebook_switch_page), win);
+-    g_signal_connect(win->notebook, "page-added", G_CALLBACK(on_notebook_page_added), win);
+-    g_signal_connect(win->notebook, "page-removed", G_CALLBACK(on_notebook_page_removed), win);
++  g_signal_connect_after(win->notebook, "switch-page",
++                         G_CALLBACK(on_notebook_switch_page), win);
++  g_signal_connect(win->notebook, "page-added",
++                   G_CALLBACK(on_notebook_page_added), win);
++  g_signal_connect(win->notebook, "page-removed",
++                   G_CALLBACK(on_notebook_page_removed), win);
+ 
+   gtk_box_pack_start(vbox, GTK_WIDGET(win->notebook), TRUE, TRUE, 0);
+   g_signal_connect(app_config, "changed::always_show_tabs",
+@@ -1003,10 +1007,12 @@ static void fm_main_win_init(FmMainWin *win)
+   /* status bar */
+   win->statusbar = (GtkStatusbar *)gtk_statusbar_new();
+   /* status bar column showing volume free space */
+-    gtk_widget_style_get(GTK_WIDGET(win->statusbar), "shadow-type", &shadow_type, NULL);
++  gtk_widget_style_get(GTK_WIDGET(win->statusbar), "shadow-type", &shadow_type,
++                       NULL);
+   win->vol_status = (GtkFrame *)gtk_frame_new(NULL);
+   gtk_frame_set_shadow_type(win->vol_status, shadow_type);
+-    gtk_box_pack_start(GTK_BOX(win->statusbar), GTK_WIDGET(win->vol_status), FALSE, TRUE, 0);
++  gtk_box_pack_start(GTK_BOX(win->statusbar), GTK_WIDGET(win->vol_status),
++                     FALSE, TRUE, 0);
+   gtk_container_add(GTK_CONTAINER(win->vol_status), gtk_label_new(NULL));
+ 
+   gtk_box_pack_start(vbox, GTK_WIDGET(win->statusbar), FALSE, TRUE, 0);
+@@ -1022,7 +1028,8 @@ static void fm_main_win_init(FmMainWin *win)
+   atk_obj = gtk_widget_get_accessible(GTK_WIDGET(win->location));
+   relation = atk_relation_new(&atk_obj, 1, ATK_RELATION_LABEL_FOR);
+   /* use atk_view for button temporarily */
+-    atk_view = gtk_widget_get_accessible(gtk_ui_manager_get_widget(ui, "/toolbar/Go"));
++  atk_view =
++      gtk_widget_get_accessible(gtk_ui_manager_get_widget(ui, "/toolbar/Go"));
+   atk_relation_set_add(atk_object_ref_relation_set(atk_view), relation);
+   g_object_unref(relation);
+   /* setup relations with view */
+@@ -1038,9 +1045,7 @@ static void fm_main_win_init(FmMainWin *win)
+   gtk_container_add(GTK_CONTAINER(win), GTK_WIDGET(vbox));
+ }
+ 
+-
+-FmMainWin* fm_main_win_new(void)
+-{
++FmMainWin *fm_main_win_new(void) {
+   FmMainWin *win = (FmMainWin *)g_object_new(FM_MAIN_WIN_TYPE, NULL);
+   return win;
+ }
+@@ -1058,30 +1063,33 @@ static void fm_main_win_destroy(GtkObject *object)
+   win = (FmMainWin *)object;
+ 
+   /* Gtk+ runs destroy method twice */
+-    if(win->win_group)
+-    {
+-        g_signal_handlers_disconnect_by_func(win->location, on_location_activate, win);
+-        g_signal_handlers_disconnect_by_func(win->notebook, on_notebook_switch_page, win);
+-        g_signal_handlers_disconnect_by_func(win->notebook, on_notebook_page_added, win);
+-        g_signal_handlers_disconnect_by_func(win->notebook, on_notebook_page_removed, win);
++  if (win->win_group) {
++    g_signal_handlers_disconnect_by_func(win->location, on_location_activate,
++                                         win);
++    g_signal_handlers_disconnect_by_func(win->notebook, on_notebook_switch_page,
++                                         win);
++    g_signal_handlers_disconnect_by_func(win->notebook, on_notebook_page_added,
++                                         win);
++    g_signal_handlers_disconnect_by_func(win->notebook,
++                                         on_notebook_page_removed, win);
+     g_signal_handlers_disconnect_by_func(app_config, on_toolsbar_changed, win);
+     g_signal_handlers_disconnect_by_func(app_config, on_statusbar_changed, win);
+-        g_signal_handlers_disconnect_by_func(app_config, on_always_show_tabs_changed, win);
++    g_signal_handlers_disconnect_by_func(app_config,
++                                         on_always_show_tabs_changed, win);
+ 
+     gtk_window_group_remove_window(win->win_group, GTK_WINDOW(win));
+     g_object_unref(win->win_group);
+     win->win_group = NULL;
+     g_object_unref(win->ui);
+     win->ui = NULL;
+-        if(win->bookmarks)
+-        {
+-            g_signal_handlers_disconnect_by_func(win->bookmarks, on_bookmarks_changed, win);
++    if (win->bookmarks) {
++      g_signal_handlers_disconnect_by_func(win->bookmarks, on_bookmarks_changed,
++                                           win);
+       g_object_unref(win->bookmarks);
+       win->bookmarks = NULL;
+     }
+     /* This is for removing idle_focus_view() */
+-        if(win->idle_handler)
+-        {
++    if (win->idle_handler) {
+       g_source_remove(win->idle_handler);
+       win->idle_handler = 0;
+     }
+@@ -1099,8 +1107,7 @@ static void fm_main_win_destroy(GtkObject *object)
+ #endif
+ }
+ 
+-static void fm_main_win_finalize(GObject *object)
+-{
++static void fm_main_win_finalize(GObject *object) {
+   g_return_if_fail(object != NULL);
+   g_return_if_fail(IS_FM_MAIN_WIN(object));
+ 
+@@ -1110,39 +1117,34 @@ static void fm_main_win_finalize(GObject *object)
+   pcmanfm_unref();
+ }
+ 
+-static void on_unrealize(GtkWidget* widget)
+-{
++static void on_unrealize(GtkWidget *widget) {
+   int w, h;
+   FmMainWin *win = FM_MAIN_WIN(widget);
+ 
+   gtk_window_get_size(GTK_WINDOW(widget), &w, &h);
+   if (!win->fullscreen && !win->maximized &&
+-       (w != app_config->win_width || h != app_config->win_height))
+-    {
++      (w != app_config->win_width || h != app_config->win_height)) {
+     app_config->win_width = w;
+     app_config->win_height = h;
+     pcmanfm_save_config(FALSE);
+   }
+-    if (win->maximized != app_config->maximized)
+-    {
++  if (win->maximized != app_config->maximized) {
+     app_config->maximized = win->maximized;
+     pcmanfm_save_config(FALSE);
+   }
+   (*GTK_WIDGET_CLASS(fm_main_win_parent_class)->unrealize)(widget);
+ }
+ 
+-static void on_about_response(GtkDialog* dlg, gint response, GtkAboutDialog **dlgptr)
+-{
++static void on_about_response(GtkDialog *dlg, gint response,
++                              GtkAboutDialog **dlgptr) {
+   g_signal_handlers_disconnect_by_func(dlg, on_about_response, dlgptr);
+   *dlgptr = NULL;
+   pcmanfm_unref();
+   gtk_widget_destroy(GTK_WIDGET(dlg));
+ }
+ 
+-static void on_about(GtkAction* act, FmMainWin* win)
+-{
+-    if(!about_dlg)
+-    {
++static void on_about(GtkAction *act, FmMainWin *win) {
++  if (!about_dlg) {
+     GString *comments = g_string_new(_("Lightweight file manager\n"));
+ #if GTK_CHECK_VERSION(3, 10, 0)
+     GtkBuilder *builder = gtk_builder_new_from_file(PACKAGE_UI_DIR "/about.ui");
+@@ -1159,47 +1161,47 @@ static void on_about(GtkAction* act, FmMainWin* win)
+     gtk_about_dialog_set_comments(about_dlg, comments->str);
+     g_string_free(comments, TRUE);
+     g_object_unref(builder);
+-        g_signal_connect(about_dlg, "response", G_CALLBACK(on_about_response), (gpointer)&about_dlg);
++    g_signal_connect(about_dlg, "response", G_CALLBACK(on_about_response),
++                     (gpointer)&about_dlg);
+     pcmanfm_ref();
+   }
+   gtk_window_present(GTK_WINDOW(about_dlg));
+ }
+ 
+-static void on_key_nav_list_response(GtkDialog* dlg, gint response, GtkDialog **dlgptr)
+-{
++static void on_key_nav_list_response(GtkDialog *dlg, gint response,
++                                     GtkDialog **dlgptr) {
+   g_signal_handlers_disconnect_by_func(dlg, on_key_nav_list_response, dlgptr);
+   *dlgptr = NULL;
+   gtk_widget_destroy(GTK_WIDGET(dlg));
+ }
+ 
+-static void on_key_nav_list(GtkAction* act, FmMainWin* win)
+-{
+-    if(!key_nav_list_dlg)
+-    {
++static void on_key_nav_list(GtkAction *act, FmMainWin *win) {
++  if (!key_nav_list_dlg) {
+     g_debug("creating key_nav_list_dlg");
+-        key_nav_list_dlg = gtk_message_dialog_new(NULL, 0,
+-                                                  GTK_MESSAGE_INFO,
+-                                                  GTK_BUTTONS_OK,
+-                                                  _("Keyboard Navigation"));
+-        gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(key_nav_list_dlg),
++    key_nav_list_dlg = gtk_message_dialog_new(
++        NULL, 0, GTK_MESSAGE_INFO, GTK_BUTTONS_OK, _("Keyboard Navigation"));
++    gtk_message_dialog_format_secondary_text(
++        GTK_MESSAGE_DIALOG(key_nav_list_dlg),
+         _("Tab: cycle focus Folder View -> Side Pane -> Tools Bar\n"
+           "Shift+Tab: cycle focus Tools Bar -> Side Pane -> Folder View\n"
+           "F6: change focus Side pane <-> Folder view\n"
+           "F8: focus divider between Side pane and Folder view\n"
+           "F10: activate main menu\n"
+           "Ctrl+L or Alt+D: jump focus to Path Bar"));
+-        gtk_window_set_title(GTK_WINDOW(key_nav_list_dlg), _("Keyboard Navigation"));
+-        g_signal_connect(key_nav_list_dlg, "response", G_CALLBACK(on_key_nav_list_response), (gpointer)&key_nav_list_dlg);
++    gtk_window_set_title(GTK_WINDOW(key_nav_list_dlg),
++                         _("Keyboard Navigation"));
++    g_signal_connect(key_nav_list_dlg, "response",
++                     G_CALLBACK(on_key_nav_list_response),
++                     (gpointer)&key_nav_list_dlg);
+   }
+   gtk_window_present(GTK_WINDOW(key_nav_list_dlg));
+ }
+ 
+-static void on_open_in_terminal(GtkAction* act, FmMainWin* win)
+-{
++static void on_open_in_terminal(GtkAction *act, FmMainWin *win) {
+   FmPath *path;
+ #if FM_CHECK_VERSION(1, 0, 2)
+-    path = fm_nav_history_get_nth_path(win->nav_history,
+-                                fm_nav_history_get_cur_index(win->nav_history));
++  path = fm_nav_history_get_nth_path(
++      win->nav_history, fm_nav_history_get_cur_index(win->nav_history));
+   if (path)
+ #else
+   const FmNavHistoryItem *item = fm_nav_history_get_cur(win->nav_history);
+@@ -1209,8 +1211,7 @@ static void on_open_in_terminal(GtkAction* act, FmMainWin* win)
+ }
+ 
+ #if FM_CHECK_VERSION(1, 0, 2)
+-static void on_search(GtkAction* act, FmMainWin* win)
+-{
++static void on_search(GtkAction *act, FmMainWin *win) {
+   FmTabPage *page = win->current_page;
+   FmPath *cwd = fm_tab_page_get_cwd(page);
+   GList *l = g_list_append(NULL, cwd);
+@@ -1220,8 +1221,7 @@ static void on_search(GtkAction* act, FmMainWin* win)
+ #endif
+ 
+ #if FM_CHECK_VERSION(1, 2, 0)
+-static void on_launch(GtkAction* act, FmMainWin* win)
+-{
++static void on_launch(GtkAction *act, FmMainWin *win) {
+   char *cmd, *cwd, *def;
+ 
+   cmd = fm_get_user_input(GTK_WINDOW(win), _("Run a command"),
+@@ -1233,8 +1233,7 @@ static void on_launch(GtkAction* act, FmMainWin* win)
+   if (chdir(cwd) != 0) /* error */
+   {
+     fm_show_error(GTK_WINDOW(win), _("Current folder is inaccessible"), NULL);
+-    }
+-    else /* run and return back */
++  } else /* run and return back */
+   {
+     fm_launch_command_simple(GTK_WINDOW(win), NULL, 0, cmd, NULL);
+     /* return back */
+@@ -1247,8 +1246,7 @@ static void on_launch(GtkAction* act, FmMainWin* win)
+ }
+ #endif
+ 
+-static void on_show_hidden(GtkToggleAction* act, FmMainWin* win)
+-{
++static void on_show_hidden(GtkToggleAction *act, FmMainWin *win) {
+   FmTabPage *page = win->current_page;
+   gboolean active;
+ 
+@@ -1259,47 +1257,42 @@ static void on_show_hidden(GtkToggleAction* act, FmMainWin* win)
+   fm_tab_page_set_show_hidden(page, active);
+ }
+ 
+-static void on_fullscreen(GtkToggleAction* act, FmMainWin* win)
+-{
++static void on_fullscreen(GtkToggleAction *act, FmMainWin *win) {
+   gboolean active = gtk_toggle_action_get_active(act);
+ 
+   if (win->fullscreen == active)
+     return;
+   win->fullscreen = active;
+-    if(win->fullscreen)
+-    {
++  if (win->fullscreen) {
+     int w, h;
+ 
+     gtk_window_get_size(GTK_WINDOW(win), &w, &h);
+-        if(w != app_config->win_width || h != app_config->win_height)
+-        {
++    if (w != app_config->win_width || h != app_config->win_height) {
+       app_config->win_width = w;
+       app_config->win_height = h;
+       pcmanfm_save_config(FALSE);
+     }
+     gtk_window_fullscreen(GTK_WINDOW(win));
+-    }
+-    else
++  } else
+     gtk_window_unfullscreen(GTK_WINDOW(win));
+ }
+ 
+-static void on_change_mode(GtkRadioAction* act, GtkRadioAction *cur, FmMainWin* win)
+-{
++static void on_change_mode(GtkRadioAction *act, GtkRadioAction *cur,
++                           FmMainWin *win) {
+   int mode = gtk_radio_action_get_current_value(cur);
+   if (win->in_update)
+     return;
+   fm_standard_view_set_mode(FM_STANDARD_VIEW(win->folder_view), mode);
+   if (win->current_page->own_config)
+-        fm_app_config_save_config_for_path(fm_folder_view_get_cwd(win->folder_view),
+-                                           win->current_page->sort_type,
+-                                           win->current_page->sort_by, mode,
+-                                           win->current_page->show_hidden, NULL);
++    fm_app_config_save_config_for_path(
++        fm_folder_view_get_cwd(win->folder_view), win->current_page->sort_type,
++        win->current_page->sort_by, mode, win->current_page->show_hidden, NULL);
+   else
+     win->current_page->view_mode = mode;
+ }
+ 
+-static void on_sort_by(GtkRadioAction* act, GtkRadioAction *cur, FmMainWin* win)
+-{
++static void on_sort_by(GtkRadioAction *act, GtkRadioAction *cur,
++                       FmMainWin *win) {
+   int val = gtk_radio_action_get_current_value(cur);
+   FmFolderView *fv = win->folder_view;
+ #if FM_CHECK_VERSION(1, 0, 2)
+@@ -1310,19 +1303,13 @@ static void on_sort_by(GtkRadioAction* act, GtkRadioAction *cur, FmMainWin* win)
+ #else
+   fm_folder_view_sort(fv, -1, val);
+ #endif
+-    if(val != (int)win->current_page->sort_by)
+-    {
++  if (val != (int)win->current_page->sort_by) {
+     win->current_page->sort_by = val;
+-        if (win->current_page->own_config)
+-        {
++    if (win->current_page->own_config) {
+       fm_app_config_save_config_for_path(fm_folder_view_get_cwd(fv),
+-                                               win->current_page->sort_type,
+-                                               val, -1,
+-                                               win->current_page->show_hidden,
+-                                               NULL);
+-        }
+-        else
+-        {
++                                         win->current_page->sort_type, val, -1,
++                                         win->current_page->show_hidden, NULL);
++    } else {
+       app_config->sort_by = val;
+       pcmanfm_save_config(FALSE);
+     }
+@@ -1330,41 +1317,39 @@ static void on_sort_by(GtkRadioAction* act, GtkRadioAction *cur, FmMainWin* win)
+ }
+ 
+ #if FM_CHECK_VERSION(1, 0, 2)
+-static inline void update_sort_type_for_page(FmTabPage *page, FmFolderView *fv, FmSortMode mode)
++static inline void update_sort_type_for_page(FmTabPage *page, FmFolderView *fv,
++                                             FmSortMode mode)
+ #else
+-static inline void update_sort_type_for_page(FmTabPage *page, FmFolderView *fv, guint mode)
++static inline void update_sort_type_for_page(FmTabPage *page, FmFolderView *fv,
++                                             guint mode)
+ #endif
+ {
+-    if(mode != page->sort_type)
+-    {
++  if (mode != page->sort_type) {
+     page->sort_type = mode;
+-        if (page->own_config)
+-        {
++    if (page->own_config) {
+       fm_app_config_save_config_for_path(fm_folder_view_get_cwd(fv), mode,
+-                                               page->sort_by, -1,
+-                                               page->show_hidden, NULL);
+-        }
+-        else
+-        {
++                                         page->sort_by, -1, page->show_hidden,
++                                         NULL);
++    } else {
+       app_config->sort_type = mode;
+       pcmanfm_save_config(FALSE);
+     }
+   }
+ }
+ 
+-static void on_sort_type(GtkRadioAction* act, GtkRadioAction *cur, FmMainWin* win)
+-{
++static void on_sort_type(GtkRadioAction *act, GtkRadioAction *cur,
++                         FmMainWin *win) {
+   guint val = gtk_radio_action_get_current_value(cur);
+   FmFolderView *fv = win->folder_view;
+ #if FM_CHECK_VERSION(1, 0, 2)
+   FmFolderModel *model = fm_folder_view_get_model(fv);
+   FmSortMode mode;
+ 
+-    if (model)
+-    {
++  if (model) {
+     fm_folder_model_get_sort(model, NULL, &mode);
+     mode &= ~FM_SORT_ORDER_MASK;
+-        mode |= (val == GTK_SORT_ASCENDING) ? FM_SORT_ASCENDING : FM_SORT_DESCENDING;
++    mode |=
++        (val == GTK_SORT_ASCENDING) ? FM_SORT_ASCENDING : FM_SORT_DESCENDING;
+     fm_folder_model_set_sort(model, -1, mode);
+     update_sort_type_for_page(win->current_page, fv, mode);
+   }
+@@ -1375,15 +1360,13 @@ static void on_sort_type(GtkRadioAction* act, GtkRadioAction *cur, FmMainWin* wi
+ }
+ 
+ #if FM_CHECK_VERSION(1, 2, 0)
+-static void on_mingle_dirs(GtkToggleAction* act, FmMainWin* win)
+-{
++static void on_mingle_dirs(GtkToggleAction *act, FmMainWin *win) {
+   FmFolderView *fv = win->folder_view;
+   FmFolderModel *model = fm_folder_view_get_model(fv);
+   FmSortMode mode;
+   gboolean active;
+ 
+-    if (model)
+-    {
++  if (model) {
+     fm_folder_model_get_sort(model, NULL, &mode);
+     active = gtk_toggle_action_get_active(act);
+     mode &= ~FM_SORT_NO_FOLDER_FIRST;
+@@ -1396,15 +1379,13 @@ static void on_mingle_dirs(GtkToggleAction* act, FmMainWin* win)
+ #endif
+ 
+ #if FM_CHECK_VERSION(1, 0, 2)
+-static void on_sort_ignore_case(GtkToggleAction* act, FmMainWin* win)
+-{
++static void on_sort_ignore_case(GtkToggleAction *act, FmMainWin *win) {
+   FmFolderView *fv = win->folder_view;
+   FmFolderModel *model = fm_folder_view_get_model(fv);
+   FmSortMode mode;
+   gboolean active;
+ 
+-    if (model)
+-    {
++  if (model) {
+     fm_folder_model_get_sort(model, NULL, &mode);
+     active = gtk_toggle_action_get_active(act);
+     mode &= ~FM_SORT_CASE_SENSITIVE;
+@@ -1416,30 +1397,27 @@ static void on_sort_ignore_case(GtkToggleAction* act, FmMainWin* win)
+ }
+ #endif
+ 
+-static void on_save_per_folder(GtkToggleAction* act, FmMainWin* win)
+-{
++static void on_save_per_folder(GtkToggleAction *act, FmMainWin *win) {
+   gboolean active = gtk_toggle_action_get_active(act);
+   FmTabPage *page = win->current_page;
+   FmFolderView *fv = win->folder_view;
+ 
+-    if (active)
+-    {
++  if (active) {
+     if (page->own_config) /* not changed */
+       return;
+     page->own_config = TRUE;
+ #if FM_CHECK_VERSION(1, 0, 2)
+     page->columns = g_strdupv(app_config->columns);
+ #endif
+-        fm_app_config_save_config_for_path(fm_folder_view_get_cwd(fv),
+-                                           page->sort_type, page->sort_by,
++    fm_app_config_save_config_for_path(
++        fm_folder_view_get_cwd(fv), page->sort_type, page->sort_by,
+         fm_standard_view_get_mode(FM_STANDARD_VIEW(fv)),
+ #if FM_CHECK_VERSION(1, 0, 2)
+         page->show_hidden, page->columns);
+ #else
+         page->show_hidden, NULL);
+ #endif
+-    }
+-    else if (page->own_config) /* attribute removed */
++  } else if (page->own_config) /* attribute removed */
+   {
+     page->own_config = FALSE;
+ #if FM_CHECK_VERSION(1, 0, 2)
+@@ -1450,8 +1428,8 @@ static void on_save_per_folder(GtkToggleAction* act, FmMainWin* win)
+   }
+ }
+ 
+-static void on_side_pane_mode(GtkRadioAction* act, GtkRadioAction *cur, FmMainWin* win)
+-{
++static void on_side_pane_mode(GtkRadioAction *act, GtkRadioAction *cur,
++                              FmMainWin *win) {
+   FmTabPage *cur_page = win->current_page;
+   FmSidePane *sp;
+ 
+@@ -1462,57 +1440,48 @@ static void on_side_pane_mode(GtkRadioAction* act, GtkRadioAction *cur, FmMainWi
+   fm_side_pane_set_mode(sp, val);
+ }
+ 
+-static gboolean on_focus_in(GtkWidget* w, GdkEventFocus* evt)
+-{
+-    if(all_wins->data != w)
+-    {
++static gboolean on_focus_in(GtkWidget *w, GdkEventFocus *evt) {
++  if (all_wins->data != w) {
+     all_wins = g_slist_remove(all_wins, w);
+     all_wins = g_slist_prepend(all_wins, w);
+   }
+   return GTK_WIDGET_CLASS(fm_main_win_parent_class)->focus_in_event(w, evt);
+ }
+ 
+-static void on_new_win(GtkAction* act, FmMainWin* win)
+-{
++static void on_new_win(GtkAction *act, FmMainWin *win) {
+   FmPath *path = fm_tab_page_get_cwd(win->current_page);
+   fm_main_win_add_win(win, path);
+ }
+ 
+-static void on_new_tab(GtkAction* act, FmMainWin* win)
+-{
++static void on_new_tab(GtkAction *act, FmMainWin *win) {
+   FmPath *path = fm_tab_page_get_cwd(win->current_page);
+   fm_main_win_add_tab(win, path);
+   /* FR #1967725: focus location bar for newly created tab */
+   gtk_window_set_focus(GTK_WINDOW(win), GTK_WIDGET(win->location));
+-    if (win->idle_handler)
+-    {
++  if (win->idle_handler) {
+     /* it will steal focus so cancel it */
+     g_source_remove(win->idle_handler);
+     win->idle_handler = 0;
+   }
+ }
+ 
+-static void on_close_win(GtkAction* act, FmMainWin* win)
+-{
++static void on_close_win(GtkAction *act, FmMainWin *win) {
+   gtk_widget_destroy(GTK_WIDGET(win));
+ }
+ 
+-static void on_close_tab(GtkAction* act, FmMainWin* win)
+-{
++static void on_close_tab(GtkAction *act, FmMainWin *win) {
+   GtkNotebook *nb = win->notebook;
+   /* remove current page */
+   gtk_notebook_remove_page(nb, gtk_notebook_get_current_page(nb));
+ }
+ 
+-
+-static void on_go(GtkAction* act, FmMainWin* win)
+-{
+-    /* fm_main_win_chdir_by_name(win, gtk_entry_get_text(GTK_ENTRY(win->location))); */
++static void on_go(GtkAction *act, FmMainWin *win) {
++  /* fm_main_win_chdir_by_name(win,
++   * gtk_entry_get_text(GTK_ENTRY(win->location))); */
+   g_signal_emit_by_name(win->location, "activate");
+ }
+ 
+-static void _update_hist_buttons(FmMainWin* win)
+-{
++static void _update_hist_buttons(FmMainWin *win) {
+   GtkAction *act;
+   FmNavHistory *nh = fm_tab_page_get_history(win->current_page);
+ 
+@@ -1527,27 +1496,23 @@ static void _update_hist_buttons(FmMainWin* win)
+   update_file_menu(win, fm_tab_page_get_cwd(win->current_page));
+ }
+ 
+-static void on_go_back(GtkAction* act, FmMainWin* win)
+-{
++static void on_go_back(GtkAction *act, FmMainWin *win) {
+   fm_tab_page_back(win->current_page);
+   _update_hist_buttons(win);
+ }
+ 
+-static void on_go_forward(GtkAction* act, FmMainWin* win)
+-{
++static void on_go_forward(GtkAction *act, FmMainWin *win) {
+   fm_tab_page_forward(win->current_page);
+   _update_hist_buttons(win);
+ }
+ 
+-static void on_go_up(GtkAction* act, FmMainWin* win)
+-{
++static void on_go_up(GtkAction *act, FmMainWin *win) {
+   FmPath *parent = fm_path_get_parent(fm_tab_page_get_cwd(win->current_page));
+   if (parent)
+     fm_main_win_chdir(win, parent);
+ }
+ 
+-static void on_go_home(GtkAction* act, FmMainWin* win)
+-{
++static void on_go_home(GtkAction *act, FmMainWin *win) {
+ #if FM_CHECK_VERSION(1, 2, 0)
+   if (app_config->home_path && app_config->home_path[0])
+     fm_main_win_chdir_by_name(win, app_config->home_path);
+@@ -1556,45 +1521,37 @@ static void on_go_home(GtkAction* act, FmMainWin* win)
+     fm_main_win_chdir(win, fm_path_get_home());
+ }
+ 
+-static void on_go_desktop(GtkAction* act, FmMainWin* win)
+-{
++static void on_go_desktop(GtkAction *act, FmMainWin *win) {
+   fm_main_win_chdir(win, fm_path_get_desktop());
+ }
+ 
+-static void on_go_trash(GtkAction* act, FmMainWin* win)
+-{
++static void on_go_trash(GtkAction *act, FmMainWin *win) {
+   fm_main_win_chdir(win, fm_path_get_trash());
+ }
+ 
+-static void on_go_computer(GtkAction* act, FmMainWin* win)
+-{
++static void on_go_computer(GtkAction *act, FmMainWin *win) {
+   fm_main_win_chdir_by_name(win, "computer:///");
+ }
+ 
+-static void on_go_network(GtkAction* act, FmMainWin* win)
+-{
++static void on_go_network(GtkAction *act, FmMainWin *win) {
+   fm_main_win_chdir_by_name(win, "network:///");
+ }
+ 
+-static void on_go_apps(GtkAction* act, FmMainWin* win)
+-{
++static void on_go_apps(GtkAction *act, FmMainWin *win) {
+   fm_main_win_chdir(win, fm_path_get_apps_menu());
+ }
+ 
+-static void on_go_connect(GtkAction* act, FmMainWin* win)
+-{
++static void on_go_connect(GtkAction *act, FmMainWin *win) {
+   open_connect_dialog(GTK_WINDOW(win));
+ }
+ 
+-void fm_main_win_chdir_by_name(FmMainWin* win, const char* path_str)
+-{
++void fm_main_win_chdir_by_name(FmMainWin *win, const char *path_str) {
+   FmPath *path = fm_path_new_for_str(path_str);
+   fm_main_win_chdir(win, path);
+   fm_path_unref(path);
+ }
+ 
+-void fm_main_win_chdir(FmMainWin* win, FmPath* path)
+-{
++void fm_main_win_chdir(FmMainWin *win, FmPath *path) {
+   GtkWidget *current_focus;
+ 
+   /* NOTE: fm_tab_page_chdir() calls fm_side_pane_chdir(), which can
+@@ -1620,8 +1577,9 @@ static void close_btn_style_set(GtkWidget *btn, GtkRcStyle *prev, gpointer data)
+ }
+ #endif
+ 
+-static gboolean on_tab_label_button_pressed(GtkWidget* tab_label, GdkEventButton* evt, FmTabPage* tab_page)
+-{
++static gboolean on_tab_label_button_pressed(GtkWidget *tab_label,
++                                            GdkEventButton *evt,
++                                            FmTabPage *tab_page) {
+   if (evt->button == 2) /* middle click */
+   {
+     gtk_widget_destroy(GTK_WIDGET(tab_page));
+@@ -1630,8 +1588,7 @@ static gboolean on_tab_label_button_pressed(GtkWidget* tab_label, GdkEventButton
+   return FALSE;
+ }
+ 
+-static void update_statusbar(FmMainWin* win)
+-{
++static void update_statusbar(FmMainWin *win) {
+   FmTabPage *page = win->current_page;
+   const char *text;
+   if (!app_config->show_statusbar)
+@@ -1647,18 +1604,15 @@ static void update_statusbar(FmMainWin* win)
+     gtk_statusbar_push(win->statusbar, win->statusbar_ctx2, text);
+ 
+   text = fm_tab_page_get_status_text(page, FM_STATUS_TEXT_FS_INFO);
+-    if(text)
+-    {
++  if (text) {
+     GtkLabel *label = GTK_LABEL(gtk_bin_get_child(GTK_BIN(win->vol_status)));
+     gtk_label_set_text(label, text);
+     gtk_widget_show(GTK_WIDGET(win->vol_status));
+-    }
+-    else
++  } else
+     gtk_widget_hide(GTK_WIDGET(win->vol_status));
+ }
+ 
+-gint fm_main_win_add_tab(FmMainWin* win, FmPath* path)
+-{
++gint fm_main_win_add_tab(FmMainWin *win, FmPath *path) {
+   FmTabPage *page = fm_tab_page_new(path);
+   GtkWidget *gpage = GTK_WIDGET(page);
+   FmTabLabel *label = page->tab_label;
+@@ -1667,13 +1621,17 @@ gint fm_main_win_add_tab(FmMainWin* win, FmPath* path)
+ 
+   gtk_paned_set_position(GTK_PANED(page), app_config->splitter_pos);
+ 
+-    g_signal_connect(folder_view, "key-press-event", G_CALLBACK(on_view_key_press_event), win);
++  g_signal_connect(folder_view, "key-press-event",
++                   G_CALLBACK(on_view_key_press_event), win);
+ 
+-    g_signal_connect_swapped(label->close_btn, "clicked", G_CALLBACK(gtk_widget_destroy), page);
+-    g_signal_connect(label, "button-press-event", G_CALLBACK(on_tab_label_button_pressed), page);
++  g_signal_connect_swapped(label->close_btn, "clicked",
++                           G_CALLBACK(gtk_widget_destroy), page);
++  g_signal_connect(label, "button-press-event",
++                   G_CALLBACK(on_tab_label_button_pressed), page);
+ 
+   /* add the tab */
+-    ret = gtk_notebook_append_page(win->notebook, gpage, GTK_WIDGET(page->tab_label));
++  ret = gtk_notebook_append_page(win->notebook, gpage,
++                                 GTK_WIDGET(page->tab_label));
+   gtk_widget_show_all(gpage);
+   gtk_notebook_set_tab_reorderable(win->notebook, gpage, TRUE);
+   gtk_notebook_set_current_page(win->notebook, ret);
+@@ -1681,72 +1639,79 @@ gint fm_main_win_add_tab(FmMainWin* win, FmPath* path)
+   return ret;
+ }
+ 
+-static gboolean on_window_state_event(GtkWidget *widget, GdkEventWindowState *evt, FmMainWin *win)
+-{
++static gboolean on_window_state_event(GtkWidget *widget,
++                                      GdkEventWindowState *evt,
++                                      FmMainWin *win) {
+   if (evt->changed_mask & GDK_WINDOW_STATE_FULLSCREEN)
+-        win->fullscreen = ((evt->new_window_state & GDK_WINDOW_STATE_FULLSCREEN) != 0);
++    win->fullscreen =
++        ((evt->new_window_state & GDK_WINDOW_STATE_FULLSCREEN) != 0);
+   if (evt->changed_mask & GDK_WINDOW_STATE_MAXIMIZED)
+-        win->maximized = ((evt->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) != 0);
++    win->maximized =
++        ((evt->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) != 0);
+   return FALSE;
+ }
+ 
+-FmMainWin* fm_main_win_add_win(FmMainWin* win, FmPath* path)
+-{
++FmMainWin *fm_main_win_add_win(FmMainWin *win, FmPath *path) {
+   GtkAction *act;
+ 
+   win = fm_main_win_new();
+-    gtk_window_set_default_size(GTK_WINDOW(win),
+-                                app_config->win_width,
++  gtk_window_set_default_size(GTK_WINDOW(win), app_config->win_width,
+                               app_config->win_height);
+   if (app_config->maximized)
+     gtk_window_maximize(GTK_WINDOW(win));
+   gtk_widget_show_all(GTK_WIDGET(win));
+-    g_signal_connect(win, "window-state-event", G_CALLBACK(on_window_state_event), win);
++  g_signal_connect(win, "window-state-event", G_CALLBACK(on_window_state_event),
++                   win);
+   /* create new tab */
+   fm_main_win_add_tab(win, path);
+   gtk_window_present(GTK_WINDOW(win));
+   /* set toolbar visibility and menu toggleables from config */
+-    act = gtk_ui_manager_get_action(win->ui, "/menubar/ViewMenu/Toolbar/ShowToolbar");
++  act = gtk_ui_manager_get_action(win->ui,
++                                  "/menubar/ViewMenu/Toolbar/ShowToolbar");
+   gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(act), app_config->tb.visible);
+-    act = gtk_ui_manager_get_action(win->ui, "/menubar/ViewMenu/Toolbar/ToolbarNewWin");
++  act = gtk_ui_manager_get_action(win->ui,
++                                  "/menubar/ViewMenu/Toolbar/ToolbarNewWin");
+   gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(act), app_config->tb.new_win);
+-    act = gtk_ui_manager_get_action(win->ui, "/menubar/ViewMenu/Toolbar/ToolbarNewTab");
++  act = gtk_ui_manager_get_action(win->ui,
++                                  "/menubar/ViewMenu/Toolbar/ToolbarNewTab");
+   gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(act), app_config->tb.new_tab);
+-    act = gtk_ui_manager_get_action(win->ui, "/menubar/ViewMenu/Toolbar/ToolbarNav");
++  act = gtk_ui_manager_get_action(win->ui,
++                                  "/menubar/ViewMenu/Toolbar/ToolbarNav");
+   gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(act), app_config->tb.nav);
+-    act = gtk_ui_manager_get_action(win->ui, "/menubar/ViewMenu/Toolbar/ToolbarHome");
++  act = gtk_ui_manager_get_action(win->ui,
++                                  "/menubar/ViewMenu/Toolbar/ToolbarHome");
+   gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(act), app_config->tb.home);
+   /* the same for statusbar */
+   act = gtk_ui_manager_get_action(win->ui, "/menubar/ViewMenu/ShowStatus");
+-    gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(act), app_config->show_statusbar);
+-    gtk_widget_set_visible(GTK_WIDGET(win->statusbar), app_config->show_statusbar);
++  gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(act),
++                               app_config->show_statusbar);
++  gtk_widget_set_visible(GTK_WIDGET(win->statusbar),
++                         app_config->show_statusbar);
+   /* the same for path bar mode */
+   gtk_widget_hide(GTK_WIDGET(win->path_bar));
+-    act = gtk_ui_manager_get_action(win->ui, "/menubar/ViewMenu/PathMode/PathEntry");
+-    gtk_radio_action_set_current_value(GTK_RADIO_ACTION(act), app_config->pathbar_mode_buttons);
++  act = gtk_ui_manager_get_action(win->ui,
++                                  "/menubar/ViewMenu/PathMode/PathEntry");
++  gtk_radio_action_set_current_value(GTK_RADIO_ACTION(act),
++                                     app_config->pathbar_mode_buttons);
+   return win;
+ }
+ 
+-static void on_open(GtkAction* act, FmMainWin* win)
+-{
++static void on_open(GtkAction *act, FmMainWin *win) {
+   FmFileInfoList *files = fm_folder_view_dup_selected_files(win->folder_view);
+-    if(files)
+-    {
++  if (files) {
+     GList *l = fm_file_info_list_peek_head_link(files);
+     if (g_list_length(l) > 0)
+-            fm_launch_files_simple(GTK_WINDOW(win), NULL, l, pcmanfm_open_folder, NULL);
++      fm_launch_files_simple(GTK_WINDOW(win), NULL, l, pcmanfm_open_folder,
++                             NULL);
+     fm_file_info_list_unref(files);
+   }
+ }
+ 
+-static void on_link(GtkAction *act, FmMainWin *win)
+-{
++static void on_link(GtkAction *act, FmMainWin *win) {
+   FmPathList *files = fm_folder_view_dup_selected_file_paths(win->folder_view);
+-    if (files)
+-    {
++  if (files) {
+     FmPath *dest = fm_select_folder(GTK_WINDOW(win), NULL);
+-        if (dest)
+-        {
++    if (dest) {
+       fm_link_files(GTK_WINDOW(win), files, dest);
+       fm_path_unref(dest);
+     }
+@@ -1754,67 +1719,56 @@ static void on_link(GtkAction *act, FmMainWin *win)
+   }
+ }
+ 
+-static void on_copy_to(GtkAction* act, FmMainWin* win)
+-{
++static void on_copy_to(GtkAction *act, FmMainWin *win) {
+   FmPathList *files = fm_folder_view_dup_selected_file_paths(win->folder_view);
+-    if(files)
+-    {
++  if (files) {
+     fm_copy_files_to(GTK_WINDOW(win), files);
+     fm_path_list_unref(files);
+   }
+ }
+ 
+-static void on_move_to(GtkAction* act, FmMainWin* win)
+-{
++static void on_move_to(GtkAction *act, FmMainWin *win) {
+   FmPathList *files = fm_folder_view_dup_selected_file_paths(win->folder_view);
+-    if(files)
+-    {
++  if (files) {
+     fm_move_files_to(GTK_WINDOW(win), files);
+     fm_path_list_unref(files);
+   }
+ }
+ 
+-static void on_rename(GtkAction* act, FmMainWin* win)
+-{
++static void on_rename(GtkAction *act, FmMainWin *win) {
+   FmPathList *files = fm_folder_view_dup_selected_file_paths(win->folder_view);
+-    if(files)
+-    {
++  if (files) {
+     fm_rename_file(GTK_WINDOW(win), fm_path_list_peek_head(files));
+     /* FIXME: is it ok to only rename the first selected file here? */
+     fm_path_list_unref(files);
+   }
+ }
+ 
+-static void on_trash(GtkAction* act, FmMainWin* win)
+-{
++static void on_trash(GtkAction *act, FmMainWin *win) {
+   FmPathList *files = fm_folder_view_dup_selected_file_paths(win->folder_view);
+-    if(files)
+-    {
++  if (files) {
+     fm_trash_files(GTK_WINDOW(win), files);
+     fm_path_list_unref(files);
+   }
+ }
+ 
+-static void on_del(GtkAction* act, FmMainWin* win)
+-{
++static void on_del(GtkAction *act, FmMainWin *win) {
+   FmPathList *files = fm_folder_view_dup_selected_file_paths(win->folder_view);
+-    if(files)
+-    {
++  if (files) {
+     fm_delete_files(GTK_WINDOW(win), files);
+     fm_path_list_unref(files);
+   }
+ }
+ 
+-static void on_copy_path(GtkAction* action, FmMainWin* win)
+-{
++static void on_copy_path(GtkAction *action, FmMainWin *win) {
+   GdkDisplay *dpy = gtk_widget_get_display(GTK_WIDGET(win));
+-    GtkClipboard *clipboard = gtk_clipboard_get_for_display(dpy, GDK_SELECTION_CLIPBOARD);
++  GtkClipboard *clipboard =
++      gtk_clipboard_get_for_display(dpy, GDK_SELECTION_CLIPBOARD);
+   GString *str = g_string_sized_new(128);
+   FmPathList *files = fm_folder_view_dup_selected_file_paths(win->folder_view);
+   GList *fl;
+ 
+-    for (fl = fm_path_list_peek_head_link(files); fl; fl = fl->next)
+-    {
++  for (fl = fm_path_list_peek_head_link(files); fl; fl = fl->next) {
+     char *path = fm_path_to_str(fl->data);
+     if (str->len > 0)
+       g_string_append_c(str, '\n');
+@@ -1825,31 +1779,31 @@ static void on_copy_path(GtkAction* action, FmMainWin* win)
+   g_string_free(str, TRUE);
+ }
+ 
+-static void on_preference(GtkAction* act, FmMainWin* win)
+-{
++static void on_preference(GtkAction *act, FmMainWin *win) {
+   fm_edit_preference(GTK_WINDOW(win), 0);
+ }
+ 
+-static void on_add_bookmark(GtkAction* act, FmMainWin* win)
+-{
++static void on_add_bookmark(GtkAction *act, FmMainWin *win) {
+   FmPath *cwd = fm_tab_page_get_cwd(win->current_page);
+   char *disp_path = fm_path_display_name(cwd, TRUE);
+-    char* msg = g_strdup_printf(_("Add following folder to bookmarks:\n\'%s\'\nEnter a name for the new bookmark item:"), disp_path);
++  char *msg =
++      g_strdup_printf(_("Add following folder to bookmarks:\n\'%s\'\nEnter a "
++                        "name for the new bookmark item:"),
++                      disp_path);
+   char *disp_name = fm_path_display_basename(cwd);
+   char *name;
+   g_free(disp_path);
+-    name = fm_get_user_input(GTK_WINDOW(win), _("Add to Bookmarks"), msg, disp_name);
++  name =
++      fm_get_user_input(GTK_WINDOW(win), _("Add to Bookmarks"), msg, disp_name);
+   g_free(disp_name);
+   g_free(msg);
+-    if(name)
+-    {
++  if (name) {
+     fm_bookmarks_append(win->bookmarks, cwd, name);
+     g_free(name);
+   }
+ }
+ 
+-static void on_show_toolbar(GtkToggleAction *action, FmMainWin *win)
+-{
++static void on_show_toolbar(GtkToggleAction *action, FmMainWin *win) {
+   gboolean active = gtk_toggle_action_get_active(action);
+ 
+   app_config->tb.visible = active;
+@@ -1858,8 +1812,7 @@ static void on_show_toolbar(GtkToggleAction *action, FmMainWin *win)
+ }
+ 
+ /* toolbar items: NewWin NewTab Prev (Hist) Next Up Home (Location) Go */
+-static void on_toolbar_new_win(GtkToggleAction *act, FmMainWin *win)
+-{
++static void on_toolbar_new_win(GtkToggleAction *act, FmMainWin *win) {
+   gboolean active = gtk_toggle_action_get_active(act);
+ 
+   app_config->tb.new_win = active;
+@@ -1867,8 +1820,7 @@ static void on_toolbar_new_win(GtkToggleAction *act, FmMainWin *win)
+   pcmanfm_save_config(FALSE);
+ }
+ 
+-static void on_toolbar_new_tab(GtkToggleAction *act, FmMainWin *win)
+-{
++static void on_toolbar_new_tab(GtkToggleAction *act, FmMainWin *win) {
+   gboolean active = gtk_toggle_action_get_active(act);
+ 
+   app_config->tb.new_tab = active;
+@@ -1876,8 +1828,7 @@ static void on_toolbar_new_tab(GtkToggleAction *act, FmMainWin *win)
+   pcmanfm_save_config(FALSE);
+ }
+ 
+-static void on_toolbar_nav(GtkToggleAction *act, FmMainWin *win)
+-{
++static void on_toolbar_nav(GtkToggleAction *act, FmMainWin *win) {
+   gboolean active = gtk_toggle_action_get_active(act);
+ 
+   app_config->tb.nav = active;
+@@ -1885,8 +1836,7 @@ static void on_toolbar_nav(GtkToggleAction *act, FmMainWin *win)
+   pcmanfm_save_config(FALSE);
+ }
+ 
+-static void on_toolbar_home(GtkToggleAction *act, FmMainWin *win)
+-{
++static void on_toolbar_home(GtkToggleAction *act, FmMainWin *win) {
+   gboolean active = gtk_toggle_action_get_active(act);
+ 
+   app_config->tb.home = active;
+@@ -1894,65 +1844,48 @@ static void on_toolbar_home(GtkToggleAction *act, FmMainWin *win)
+   pcmanfm_save_config(FALSE);
+ }
+ 
+-static void on_location(GtkAction* act, FmMainWin* win)
+-{
++static void on_location(GtkAction *act, FmMainWin *win) {
+   gtk_widget_grab_focus(GTK_WIDGET(win->location));
+-    if (app_config->pathbar_mode_buttons)
+-    {
++  if (app_config->pathbar_mode_buttons) {
+     gtk_widget_show(GTK_WIDGET(win->location));
+     gtk_widget_show(gtk_ui_manager_get_widget(win->ui, "/toolbar/Go"));
+     gtk_widget_hide(GTK_WIDGET(win->path_bar));
+   }
+ }
+ 
+-static void bounce_action(GtkAction* act, FmMainWin* win)
+-{
++static void bounce_action(GtkAction *act, FmMainWin *win) {
+   GtkWindow *window = GTK_WINDOW(win);
+   GtkWidget *current_focus;
+ 
+   g_debug("bouncing action %s to popup", gtk_action_get_name(act));
+   /* save current focus */
+   current_focus = gtk_window_get_focus(window);
+-    /* bug #3615003: if folder view does not have the focus, action will not work */
++  /* bug #3615003: if folder view does not have the focus, action will not work
++   */
+   gtk_window_set_focus(window, GTK_WIDGET(win->folder_view));
+   fm_folder_view_bounce_action(act, win->folder_view);
+   /* restore focus back */
+   gtk_window_set_focus(window, current_focus);
+ }
+ 
+-static guint icon_sizes[] =
+-{
+-    8,
+-    10,
+-    12, /* 12.6 */
+-    16,
+-    20,
+-    24, /* 25.2 */
+-    32,
+-    40,
+-    48, /* 50.4 */
+-    64,
+-    80,
+-    96, /* 101 */
++static guint icon_sizes[] = {8,   10,  12, /* 12.6 */
++                             16,  20,  24, /* 25.2 */
++                             32,  40,  48, /* 50.4 */
++                             64,  80,  96, /* 101 */
+                              128,          /* 127 */
+-    160,
+-    192, /* 202 */
++                             160, 192,     /* 202 */
+                              256,          /* 254 */
+-    320,
+-    400, /* 403 */
+-    512
+-};
++                             320, 400,     /* 403 */
++                             512};
+ 
+-static void on_size_decrement(GtkAction *act, FmMainWin *win)
+-{
++static void on_size_decrement(GtkAction *act, FmMainWin *win) {
+   FmStandardViewMode mode;
+   guint size, i;
+ 
+   if (win->folder_view == NULL)
+     return;
+   mode = fm_standard_view_get_mode(FM_STANDARD_VIEW(win->folder_view));
+-    switch (mode)
+-    {
++  switch (mode) {
+   case FM_FV_ICON_VIEW:
+     size = fm_config->big_icon_size;
+     if (size < 24)
+@@ -1972,14 +1905,12 @@ static void on_size_decrement(GtkAction *act, FmMainWin *win)
+   default:
+     return;
+   }
+-    for (i = G_N_ELEMENTS(icon_sizes); i > 0; )
+-    {
++  for (i = G_N_ELEMENTS(icon_sizes); i > 0;) {
+     i--;
+     if (icon_sizes[i] < size)
+       break;
+   }
+-    switch (mode)
+-    {
++  switch (mode) {
+   case FM_FV_ICON_VIEW:
+     fm_config->big_icon_size = icon_sizes[i];
+     fm_config_emit_changed(fm_config, "big_icon_size");
+@@ -1996,16 +1927,14 @@ static void on_size_decrement(GtkAction *act, FmMainWin *win)
+   pcmanfm_save_config(FALSE);
+ }
+ 
+-static void on_size_increment(GtkAction *act, FmMainWin *win)
+-{
++static void on_size_increment(GtkAction *act, FmMainWin *win) {
+   FmStandardViewMode mode;
+   guint size, i;
+ 
+   if (win->folder_view == NULL)
+     return;
+   mode = fm_standard_view_get_mode(FM_STANDARD_VIEW(win->folder_view));
+-    switch (mode)
+-    {
++  switch (mode) {
+   case FM_FV_ICON_VIEW:
+     size = fm_config->big_icon_size;
+     if (size > 200)
+@@ -2025,13 +1954,11 @@ static void on_size_increment(GtkAction *act, FmMainWin *win)
+   default:
+     return;
+   }
+-    for (i = 1; i < G_N_ELEMENTS(icon_sizes); i++)
+-    {
++  for (i = 1; i < G_N_ELEMENTS(icon_sizes); i++) {
+     if (icon_sizes[i] > size)
+       break;
+   }
+-    switch (mode)
+-    {
++  switch (mode) {
+   case FM_FV_ICON_VIEW:
+     fm_config->big_icon_size = icon_sizes[i];
+     fm_config_emit_changed(fm_config, "big_icon_size");
+@@ -2048,15 +1975,13 @@ static void on_size_increment(GtkAction *act, FmMainWin *win)
+   pcmanfm_save_config(FALSE);
+ }
+ 
+-static void on_size_default(GtkAction *act, FmMainWin *win)
+-{
++static void on_size_default(GtkAction *act, FmMainWin *win) {
+   FmStandardViewMode mode;
+ 
+   if (win->folder_view == NULL)
+     return;
+   mode = fm_standard_view_get_mode(FM_STANDARD_VIEW(win->folder_view));
+-    switch (mode)
+-    {
++  switch (mode) {
+   case FM_FV_ICON_VIEW:
+     if (fm_config->big_icon_size == 48)
+       return;
+@@ -2083,13 +2008,12 @@ static void on_size_default(GtkAction *act, FmMainWin *win)
+ }
+ 
+ /* This callback is only connected to folder view of current active tab page. */
+-static void on_folder_view_clicked(FmFolderView* fv, FmFolderViewClickType type, FmFileInfo* fi, FmMainWin* win)
+-{
++static void on_folder_view_clicked(FmFolderView *fv, FmFolderViewClickType type,
++                                   FmFileInfo *fi, FmMainWin *win) {
+   if (fv != win->folder_view)
+     return;
+ 
+-    switch(type)
+-    {
++  switch (type) {
+   case FM_FV_ACTIVATED: /* file activated */
+     break;              /* handled by FmFolderView */
+   case FM_FV_CONTEXT_MENU:
+@@ -2103,15 +2027,14 @@ static void on_folder_view_clicked(FmFolderView* fv, FmFolderViewClickType type,
+ }
+ 
+ /* This callback is only connected to current active tab page. */
+-static void on_tab_page_status_text(FmTabPage* page, guint type, const char* status_text, FmMainWin* win)
+-{
++static void on_tab_page_status_text(FmTabPage *page, guint type,
++                                    const char *status_text, FmMainWin *win) {
+   if (page != win->current_page)
+     return;
+   if (!app_config->show_statusbar)
+     return;
+ 
+-    switch(type)
+-    {
++  switch (type) {
+   case FM_STATUS_TEXT_NORMAL:
+     gtk_statusbar_pop(win->statusbar, win->statusbar_ctx);
+     if (status_text)
+@@ -2121,27 +2044,25 @@ static void on_tab_page_status_text(FmTabPage* page, guint type, const char* sta
+     if (fm_folder_view_get_n_selected_files(win->folder_view) == 0)
+       break;
+     /* otherwise put selection info on statusbar, continue with update */
+-        status_text = fm_tab_page_get_status_text(page, FM_STATUS_TEXT_SELECTED_FILES);
++    status_text =
++        fm_tab_page_get_status_text(page, FM_STATUS_TEXT_SELECTED_FILES);
+   case FM_STATUS_TEXT_SELECTED_FILES:
+     gtk_statusbar_pop(win->statusbar, win->statusbar_ctx2);
+     if (status_text)
+       gtk_statusbar_push(win->statusbar, win->statusbar_ctx2, status_text);
+     break;
+   case FM_STATUS_TEXT_FS_INFO:
+-        if(status_text)
+-        {
++    if (status_text) {
+       GtkLabel *label = GTK_LABEL(gtk_bin_get_child(GTK_BIN(win->vol_status)));
+       gtk_label_set_text(label, status_text);
+       gtk_widget_show(GTK_WIDGET(win->vol_status));
+-        }
+-        else
++    } else
+       gtk_widget_hide(GTK_WIDGET(win->vol_status));
+     break;
+   }
+ }
+ 
+-static void on_tab_page_chdir(FmTabPage* page, FmPath* path, FmMainWin* win)
+-{
++static void on_tab_page_chdir(FmTabPage *page, FmPath *path, FmMainWin *win) {
+   if (page != win->current_page)
+     return;
+ 
+@@ -2150,8 +2071,7 @@ static void on_tab_page_chdir(FmTabPage* page, FmPath* path, FmMainWin* win)
+   gtk_window_set_title(GTK_WINDOW(win), fm_tab_page_get_title(page));
+ }
+ 
+-static void on_tab_page_got_focus(FmTabPage* page, FmMainWin* win)
+-{
++static void on_tab_page_got_focus(FmTabPage *page, FmMainWin *win) {
+   int n = gtk_notebook_page_num(win->notebook, GTK_WIDGET(page));
+   /* sometimes views receive focus while they are in rendering process
+      therefore click on tab will not always work as expected because it
+@@ -2163,8 +2083,7 @@ static void on_tab_page_got_focus(FmTabPage* page, FmMainWin* win)
+ }
+ 
+ /* this callback may be called only after tab page is added */
+-static void on_tab_page_loaded(FmTabPage *page, FmMainWin *win)
+-{
++static void on_tab_page_loaded(FmTabPage *page, FmMainWin *win) {
+   FmFolderView *folder_view = fm_tab_page_get_folder_view(page);
+ 
+   /* update folder popup */
+@@ -2174,8 +2093,7 @@ static void on_tab_page_loaded(FmTabPage *page, FmMainWin *win)
+ }
+ 
+ #if FM_CHECK_VERSION(1, 0, 2)
+-static void on_folder_view_filter_changed(FmFolderView* fv, FmMainWin* win)
+-{
++static void on_folder_view_filter_changed(FmFolderView *fv, FmMainWin *win) {
+   GtkAction *act;
+   gboolean active;
+ 
+@@ -2186,18 +2104,13 @@ static void on_folder_view_filter_changed(FmFolderView* fv, FmMainWin* win)
+ 
+   act = gtk_ui_manager_get_action(win->ui, "/menubar/ViewMenu/ShowHidden");
+   gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(act), active);
+-    if(active != win->current_page->show_hidden)
+-    {
++  if (active != win->current_page->show_hidden) {
+     win->current_page->show_hidden = active;
+-        if (win->current_page->own_config)
+-        {
+-            fm_app_config_save_config_for_path(fm_folder_view_get_cwd(fv),
+-                                               win->current_page->sort_type,
+-                                               win->current_page->sort_by, -1,
+-                                               active, NULL);
+-        }
+-        else
+-        {
++    if (win->current_page->own_config) {
++      fm_app_config_save_config_for_path(
++          fm_folder_view_get_cwd(fv), win->current_page->sort_type,
++          win->current_page->sort_by, -1, active, NULL);
++    } else {
+       app_config->show_hidden = active;
+       pcmanfm_save_config(FALSE);
+     }
+@@ -2205,13 +2118,11 @@ static void on_folder_view_filter_changed(FmFolderView* fv, FmMainWin* win)
+ }
+ #endif
+ 
+-static inline FmTabPage *_find_tab_page(FmMainWin *win, FmFolderView *fv)
+-{
++static inline FmTabPage *_find_tab_page(FmMainWin *win, FmFolderView *fv) {
+   FmTabPage *page;
+   gint n;
+ 
+-    for (n = gtk_notebook_get_n_pages(win->notebook); n > 0; )
+-    {
++  for (n = gtk_notebook_get_n_pages(win->notebook); n > 0;) {
+     page = FM_TAB_PAGE(gtk_notebook_get_nth_page(win->notebook, --n));
+     if (fv == fm_tab_page_get_folder_view(page))
+       return page;
+@@ -2219,8 +2130,8 @@ static inline FmTabPage *_find_tab_page(FmMainWin *win, FmFolderView *fv)
+   return NULL;
+ }
+ 
+-static void on_notebook_switch_page(GtkNotebook* nb, gpointer* new_page, guint num, FmMainWin* win)
+-{
++static void on_notebook_switch_page(GtkNotebook *nb, gpointer *new_page,
++                                    guint num, FmMainWin *win) {
+   GtkWidget *sw_page = gtk_notebook_get_nth_page(nb, num);
+   FmTabPage *page;
+   FmFolderView *old_view = NULL, *passive_view = NULL;
+@@ -2228,15 +2139,13 @@ static void on_notebook_switch_page(GtkNotebook* nb, gpointer* new_page, guint n
+   g_return_if_fail(FM_IS_TAB_PAGE(sw_page));
+   page = (FmTabPage *)sw_page;
+   /* deactivate gestures from old view first */
+-    if(win->folder_view)
+-    {
++  if (win->folder_view) {
+     fm_folder_view_set_active(win->folder_view, FALSE);
+     g_object_unref(win->folder_view);
+   }
+ 
+   /* remember old views for checks below */
+-    if (win->current_page)
+-    {
++  if (win->current_page) {
+     passive_view = fm_tab_page_get_passive_view(win->current_page);
+     old_view = fm_tab_page_get_folder_view(win->current_page);
+   }
+@@ -2250,26 +2159,23 @@ static void on_notebook_switch_page(GtkNotebook* nb, gpointer* new_page, guint n
+   win->side_pane = fm_tab_page_get_side_pane(page);
+ 
+   /* set active and passive panes */
+-    if (win->enable_passive_view && passive_view)
+-    {
++  if (win->enable_passive_view && passive_view) {
+     FmTabPage *psv_page;
+ 
+-        if (win->folder_view == passive_view)
+-        {
++    if (win->folder_view == passive_view) {
+       /* we moved to other pane so we have to set passive_view_on_right */
+       win->passive_view_on_right = win->passive_view_on_right ? FALSE : TRUE;
+       passive_view = old_view;
+     }
+     /* now set it */
+-        fm_tab_page_set_passive_view(page, passive_view, win->passive_view_on_right);
++    fm_tab_page_set_passive_view(page, passive_view,
++                                 win->passive_view_on_right);
+     /* FIXME: log errors */
+     /* ok, passive view was just changed, we have to update the button */
+     psv_page = _find_tab_page(win, passive_view);
+     if (psv_page)
+       gtk_widget_set_state(GTK_WIDGET(psv_page->tab_label), GTK_STATE_SELECTED);
+-    }
+-    else
+-    {
++  } else {
+     /* FIXME: log errors */
+     fm_tab_page_take_view_back(page);
+   }
+@@ -2278,8 +2184,8 @@ static void on_notebook_switch_page(GtkNotebook* nb, gpointer* new_page, guint n
+   fm_folder_view_set_active(win->folder_view, TRUE);
+   g_debug("reactivated gestures to page %u", num);
+   /* update Cut/Copy/Del status */
+-    on_folder_view_sel_changed(win->folder_view,
+-                               fm_folder_view_get_n_selected_files(win->folder_view),
++  on_folder_view_sel_changed(
++      win->folder_view, fm_folder_view_get_n_selected_files(win->folder_view),
+       win);
+   _update_hist_buttons(win);
+ #if FM_CHECK_VERSION(1, 0, 2)
+@@ -2290,9 +2196,7 @@ static void on_notebook_switch_page(GtkNotebook* nb, gpointer* new_page, guint n
+   if (app_config->side_pane_mode & FM_SP_HIDE) /* hidden */
+   {
+     gtk_widget_hide(GTK_WIDGET(win->side_pane));
+-    }
+-    else
+-    {
++  } else {
+     fm_side_pane_set_mode(win->side_pane,
+                           (app_config->side_pane_mode & FM_SP_MODE_MASK));
+     gtk_widget_show_all(GTK_WIDGET(win->side_pane));
+@@ -2308,24 +2212,22 @@ static void on_notebook_switch_page(GtkNotebook* nb, gpointer* new_page, guint n
+   update_statusbar(win);
+ 
+   if (win->idle_handler == 0)
+-        win->idle_handler = gdk_threads_add_idle_full(G_PRIORITY_LOW,
+-                                                      idle_focus_view, win, NULL);
++    win->idle_handler =
++        gdk_threads_add_idle_full(G_PRIORITY_LOW, idle_focus_view, win, NULL);
+ }
+ 
+-static void on_notebook_page_added(GtkNotebook* nb, GtkWidget* page, guint num, FmMainWin* win)
+-{
++static void on_notebook_page_added(GtkNotebook *nb, GtkWidget *page, guint num,
++                                   FmMainWin *win) {
+   FmTabPage *tab_page = FM_TAB_PAGE(page);
+ 
+   g_signal_connect(tab_page, "notify::position",
+                    G_CALLBACK(on_tab_page_splitter_pos_changed), win);
+-    g_signal_connect(tab_page, "chdir",
+-                     G_CALLBACK(on_tab_page_chdir), win);
+-    g_signal_connect(tab_page, "status",
+-                     G_CALLBACK(on_tab_page_status_text), win);
+-    g_signal_connect(tab_page, "got-focus",
+-                     G_CALLBACK(on_tab_page_got_focus), win);
+-    g_signal_connect(tab_page, "loaded",
+-                     G_CALLBACK(on_tab_page_loaded), win);
++  g_signal_connect(tab_page, "chdir", G_CALLBACK(on_tab_page_chdir), win);
++  g_signal_connect(tab_page, "status", G_CALLBACK(on_tab_page_status_text),
++                   win);
++  g_signal_connect(tab_page, "got-focus", G_CALLBACK(on_tab_page_got_focus),
++                   win);
++  g_signal_connect(tab_page, "loaded", G_CALLBACK(on_tab_page_loaded), win);
+   /* FIXME: remove direct access */
+   g_signal_connect(tab_page->folder_view, "sort-changed",
+                    G_CALLBACK(on_folder_view_sort_changed), win);
+@@ -2340,24 +2242,22 @@ static void on_notebook_page_added(GtkNotebook* nb, GtkWidget* page, guint num,
+                    G_CALLBACK(on_folder_view_clicked), win);
+   g_signal_connect(tab_page->side_pane, "mode-changed",
+                    G_CALLBACK(on_side_pane_mode_changed), win);
+-    g_signal_connect(tab_page->side_pane, "chdir",
+-                     G_CALLBACK(on_side_pane_chdir), win);
++  g_signal_connect(tab_page->side_pane, "chdir", G_CALLBACK(on_side_pane_chdir),
++                   win);
+ 
+   /* create folder popup and apply shortcuts from it */
+   fm_folder_view_add_popup(tab_page->folder_view, GTK_WINDOW(win), NULL);
+   /* disable it yet - it will be enabled in on_notebook_switch_page() */
+   fm_folder_view_set_active(tab_page->folder_view, FALSE);
+ 
+-    if(gtk_notebook_get_n_pages(nb) > 1
+-       || app_config->always_show_tabs)
++  if (gtk_notebook_get_n_pages(nb) > 1 || app_config->always_show_tabs)
+     gtk_notebook_set_show_tabs(nb, TRUE);
+   else
+     gtk_notebook_set_show_tabs(nb, FALSE);
+ }
+ 
+-
+-static void on_notebook_page_removed(GtkNotebook* nb, GtkWidget* page, guint num, FmMainWin* win)
+-{
++static void on_notebook_page_removed(GtkNotebook *nb, GtkWidget *page,
++                                     guint num, FmMainWin *win) {
+   FmTabPage *tab_page = FM_TAB_PAGE(page);
+   FmFolderView *folder_view = fm_tab_page_get_folder_view(tab_page);
+   GtkAction *act;
+@@ -2367,18 +2267,13 @@ static void on_notebook_page_removed(GtkNotebook* nb, GtkWidget* page, guint num
+   /* disconnect from previous active page */
+   g_signal_handlers_disconnect_by_func(tab_page,
+                                        on_tab_page_splitter_pos_changed, win);
+-    g_signal_handlers_disconnect_by_func(tab_page,
+-                                         on_tab_page_chdir, win);
+-    g_signal_handlers_disconnect_by_func(tab_page,
+-                                         on_tab_page_status_text, win);
+-    g_signal_handlers_disconnect_by_func(tab_page,
+-                                         on_tab_page_got_focus, win);
+-    g_signal_handlers_disconnect_by_func(tab_page,
+-                                         on_tab_page_loaded, win);
+-    if(folder_view)
+-    {
+-        g_signal_handlers_disconnect_by_func(folder_view,
+-                                             on_view_key_press_event, win);
++  g_signal_handlers_disconnect_by_func(tab_page, on_tab_page_chdir, win);
++  g_signal_handlers_disconnect_by_func(tab_page, on_tab_page_status_text, win);
++  g_signal_handlers_disconnect_by_func(tab_page, on_tab_page_got_focus, win);
++  g_signal_handlers_disconnect_by_func(tab_page, on_tab_page_loaded, win);
++  if (folder_view) {
++    g_signal_handlers_disconnect_by_func(folder_view, on_view_key_press_event,
++                                         win);
+     g_signal_handlers_disconnect_by_func(folder_view,
+                                          on_folder_view_sort_changed, win);
+     g_signal_handlers_disconnect_by_func(folder_view,
+@@ -2387,12 +2282,11 @@ static void on_notebook_page_removed(GtkNotebook* nb, GtkWidget* page, guint num
+     g_signal_handlers_disconnect_by_func(folder_view,
+                                          on_folder_view_filter_changed, win);
+ #endif
+-        g_signal_handlers_disconnect_by_func(folder_view,
+-                                             on_folder_view_clicked, win);
++    g_signal_handlers_disconnect_by_func(folder_view, on_folder_view_clicked,
++                                         win);
+     /* update menu if passive pane was removed */
+     if (win->current_page && win->enable_passive_view &&
+-            fm_tab_page_get_passive_view(win->current_page) == folder_view)
+-        {
++        fm_tab_page_get_passive_view(win->current_page) == folder_view) {
+       win->enable_passive_view = FALSE;
+       act = gtk_ui_manager_get_action(win->ui, "/menubar/ViewMenu/DualPane");
+       gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(act), FALSE);
+@@ -2400,11 +2294,10 @@ static void on_notebook_page_removed(GtkNotebook* nb, GtkWidget* page, guint num
+   }
+   g_signal_handlers_disconnect_by_func(tab_page->side_pane,
+                                        on_side_pane_mode_changed, win);
+-    g_signal_handlers_disconnect_by_func(tab_page->side_pane,
+-                                         on_side_pane_chdir, win);
++  g_signal_handlers_disconnect_by_func(tab_page->side_pane, on_side_pane_chdir,
++                                       win);
+ 
+-    if(tab_page == win->current_page)
+-    {
++  if (tab_page == win->current_page) {
+     win->current_page = NULL;
+     if (win->folder_view)
+       g_object_unref(win->folder_view);
+@@ -2423,13 +2316,11 @@ static void on_notebook_page_removed(GtkNotebook* nb, GtkWidget* page, guint num
+     gtk_widget_destroy(GTK_WIDGET(win));
+ }
+ 
+-FmMainWin* fm_main_win_get_last_active(void)
+-{
++FmMainWin *fm_main_win_get_last_active(void) {
+   return all_wins ? (FmMainWin *)all_wins->data : NULL;
+ }
+ 
+-void fm_main_win_open_in_last_active(FmPath* path)
+-{
++void fm_main_win_open_in_last_active(FmPath *path) {
+   FmMainWin *win = fm_main_win_get_last_active();
+   if (!win)
+     win = fm_main_win_add_win(NULL, path);
+@@ -2438,8 +2329,7 @@ void fm_main_win_open_in_last_active(FmPath* path)
+   gtk_window_present(GTK_WINDOW(win));
+ }
+ 
+-static void switch_to_next_tab(FmMainWin* win)
+-{
++static void switch_to_next_tab(FmMainWin *win) {
+   int n = gtk_notebook_get_current_page(win->notebook);
+   if (n < gtk_notebook_get_n_pages(win->notebook) - 1)
+     ++n;
+@@ -2448,8 +2338,7 @@ static void switch_to_next_tab(FmMainWin* win)
+   gtk_notebook_set_current_page(win->notebook, n);
+ }
+ 
+-static void switch_to_prev_tab(FmMainWin* win)
+-{
++static void switch_to_prev_tab(FmMainWin *win) {
+   int n = gtk_notebook_get_current_page(win->notebook);
+   if (n > 0)
+     --n;
+@@ -2458,8 +2347,7 @@ static void switch_to_prev_tab(FmMainWin* win)
+   gtk_notebook_set_current_page(win->notebook, n);
+ }
+ 
+-static gboolean on_key_press_event(GtkWidget* w, GdkEventKey* evt)
+-{
++static gboolean on_key_press_event(GtkWidget *w, GdkEventKey *evt) {
+   FmMainWin *win = FM_MAIN_WIN(w);
+   int modifier = evt->state & gtk_accelerator_get_default_mod_mask();
+ 
+@@ -2475,46 +2363,36 @@ static gboolean on_key_press_event(GtkWidget* w, GdkEventKey* evt)
+       gtk_notebook_set_current_page(win->notebook, n);
+       return TRUE;
+     }
+-    }
+-    else if(modifier == GDK_CONTROL_MASK) /* Ctrl */
++  } else if (modifier == GDK_CONTROL_MASK) /* Ctrl */
+   {
+-        if(evt->keyval == GDK_KEY_Tab
+-         || evt->keyval == GDK_KEY_ISO_Left_Tab
+-         || evt->keyval == GDK_KEY_Page_Down) /* Ctrl + Tab or PageDown, next tab */
++    if (evt->keyval == GDK_KEY_Tab || evt->keyval == GDK_KEY_ISO_Left_Tab ||
++        evt->keyval == GDK_KEY_Page_Down) /* Ctrl + Tab or PageDown, next tab */
+     {
+       switch_to_next_tab(win);
+       return TRUE;
+-        }
+-        else if(evt->keyval == GDK_KEY_Page_Up)
+-        {
++    } else if (evt->keyval == GDK_KEY_Page_Up) {
+       switch_to_prev_tab(win);
+       return TRUE;
+     }
+-    }
+-    else if(modifier == (GDK_CONTROL_MASK|GDK_SHIFT_MASK)) /* Ctrl + Shift */
++  } else if (modifier == (GDK_CONTROL_MASK | GDK_SHIFT_MASK)) /* Ctrl + Shift */
+   {
+-        if(evt->keyval == GDK_KEY_Tab
+-         || evt->keyval == GDK_KEY_ISO_Left_Tab) /* Ctrl + Shift + Tab or PageUp, previous tab */
++    if (evt->keyval == GDK_KEY_Tab ||
++        evt->keyval == GDK_KEY_ISO_Left_Tab) /* Ctrl + Shift + Tab or PageUp,
++                                                previous tab */
+     {
+       switch_to_prev_tab(win);
+       return TRUE;
+     }
+-    }
+-    else if(evt->keyval == '/' || evt->keyval == '~')
+-    {
+-        if (!gtk_widget_is_focus(GTK_WIDGET(win->location)))
+-        {
++  } else if (evt->keyval == '/' || evt->keyval == '~') {
++    if (!gtk_widget_is_focus(GTK_WIDGET(win->location))) {
+       gtk_widget_grab_focus(GTK_WIDGET(win->location));
+       char path[] = {evt->keyval, 0};
+       gtk_entry_set_text(GTK_ENTRY(win->location), path);
+       gtk_editable_set_position(GTK_EDITABLE(win->location), -1);
+       return TRUE;
+     }
+-    }
+-    else if(evt->keyval == GDK_KEY_Escape)
+-    {
+-        if (gtk_widget_is_focus(GTK_WIDGET(win->location)))
+-        {
++  } else if (evt->keyval == GDK_KEY_Escape) {
++    if (gtk_widget_is_focus(GTK_WIDGET(win->location))) {
+       gtk_widget_grab_focus(GTK_WIDGET(win->folder_view));
+       fm_path_entry_set_path(win->location,
+                              fm_tab_page_get_cwd(win->current_page));
+@@ -2526,8 +2404,7 @@ static gboolean on_key_press_event(GtkWidget* w, GdkEventKey* evt)
+   return GTK_WIDGET_CLASS(fm_main_win_parent_class)->key_press_event(w, evt);
+ }
+ 
+-static gboolean on_button_press_event(GtkWidget* w, GdkEventButton* evt)
+-{
++static gboolean on_button_press_event(GtkWidget *w, GdkEventButton *evt) {
+   FmMainWin *win = FM_MAIN_WIN(w);
+   GtkAction *act;
+ 
+@@ -2535,34 +2412,31 @@ static gboolean on_button_press_event(GtkWidget* w, GdkEventButton* evt)
+   {
+     act = gtk_ui_manager_get_action(win->ui, "/Prev2");
+     gtk_action_activate(act);
+-    }
+-    else if(evt->button == 9) /* forward */
++  } else if (evt->button == 9) /* forward */
+   {
+     act = gtk_ui_manager_get_action(win->ui, "/Next2");
+     gtk_action_activate(act);
+   }
+   if (GTK_WIDGET_CLASS(fm_main_win_parent_class)->button_press_event)
+-        return GTK_WIDGET_CLASS(fm_main_win_parent_class)->button_press_event(w, evt);
++    return GTK_WIDGET_CLASS(fm_main_win_parent_class)
++        ->button_press_event(w, evt);
+   else
+     return FALSE;
+ }
+ 
+-static gboolean on_scroll_event(GtkWidget* w, GdkEventScroll* evt)
+-{
++static gboolean on_scroll_event(GtkWidget *w, GdkEventScroll *evt) {
+   FmMainWin *win = FM_MAIN_WIN(w);
+   GtkAction *act;
+   int modifier = evt->state & gtk_accelerator_get_default_mod_mask();
+ 
+   /* g_debug("on_scroll_event:%d", evt->direction); */
+-    if (modifier != GDK_CONTROL_MASK) ;
+-    else if(evt->direction == GDK_SCROLL_UP)
+-    {
++  if (modifier != GDK_CONTROL_MASK)
++    ;
++  else if (evt->direction == GDK_SCROLL_UP) {
+     act = gtk_ui_manager_get_action(win->ui, "/menubar/ViewMenu/SizeBigger");
+     gtk_action_activate(act);
+     return TRUE;
+-    }
+-    else if(evt->direction == GDK_SCROLL_DOWN)
+-    {
++  } else if (evt->direction == GDK_SCROLL_DOWN) {
+     act = gtk_ui_manager_get_action(win->ui, "/menubar/ViewMenu/SizeSmaller");
+     gtk_action_activate(act);
+     return TRUE;
+@@ -2573,15 +2447,13 @@ static gboolean on_scroll_event(GtkWidget* w, GdkEventScroll* evt)
+     return FALSE;
+ }
+ 
+-static void on_reload(GtkAction* act, FmMainWin* win)
+-{
++static void on_reload(GtkAction *act, FmMainWin *win) {
+   FmTabPage *page = win->current_page;
+   fm_tab_page_reload(page);
+ }
+ 
+ #if FM_CHECK_VERSION(1, 0, 2)
+-static void on_filter(GtkAction* act, FmMainWin* win)
+-{
++static void on_filter(GtkAction *act, FmMainWin *win) {
+   FmTabPage *page = win->current_page;
+   const char *old_filter = page->filter_pattern ? page->filter_pattern : "*";
+   char *new_filter;
+@@ -2600,18 +2472,14 @@ static void on_filter(GtkAction* act, FmMainWin* win)
+ }
+ #endif
+ 
+-static void on_show_side_pane(GtkToggleAction* act, FmMainWin* win)
+-{
++static void on_show_side_pane(GtkToggleAction *act, FmMainWin *win) {
+   gboolean active;
+ 
+   active = gtk_toggle_action_get_active(act);
+-    if(active)
+-    {
++  if (active) {
+     app_config->side_pane_mode &= ~FM_SP_HIDE;
+     gtk_widget_show_all(GTK_WIDGET(win->side_pane));
+-    }
+-    else
+-    {
++  } else {
+     app_config->side_pane_mode |= FM_SP_HIDE;
+     gtk_widget_hide(GTK_WIDGET(win->side_pane));
+   }
+@@ -2619,8 +2487,7 @@ static void on_show_side_pane(GtkToggleAction* act, FmMainWin* win)
+   pcmanfm_save_config(FALSE);
+ }
+ 
+-static void on_dual_pane(GtkToggleAction* act, FmMainWin* win)
+-{
++static void on_dual_pane(GtkToggleAction *act, FmMainWin *win) {
+   gboolean active;
+   int num;
+   FmFolderView *fv;
+@@ -2628,8 +2495,7 @@ static void on_dual_pane(GtkToggleAction* act, FmMainWin* win)
+ 
+   active = gtk_toggle_action_get_active(act);
+   /* g_debug("on_dual_pane: %d", active); */
+-    if (active && !win->enable_passive_view)
+-    {
++  if (active && !win->enable_passive_view) {
+     num = gtk_notebook_get_n_pages(win->notebook);
+     if (num < 2) /* single page yet */
+     {
+@@ -2637,17 +2503,13 @@ static void on_dual_pane(GtkToggleAction* act, FmMainWin* win)
+       num = fm_main_win_add_tab(win, fm_tab_page_get_cwd(win->current_page));
+       g_debug("on_dual_pane: added duplicate of the single page");
+       page = gtk_notebook_get_nth_page(win->notebook, 0);
+-        }
+-        else if (gtk_notebook_get_current_page(win->notebook) < num - 1)
+-        {
++    } else if (gtk_notebook_get_current_page(win->notebook) < num - 1) {
+       /* there is a page on right */
+       win->passive_view_on_right = TRUE;
+       num = gtk_notebook_get_current_page(win->notebook) + 1;
+       g_debug("on_dual_pane: adding passive page %d to right pane", num);
+       page = gtk_notebook_get_nth_page(win->notebook, num);
+-        }
+-        else
+-        {
++    } else {
+       /* it is the most right page */
+       win->passive_view_on_right = FALSE;
+       g_debug("on_dual_pane: adding passive page %d to left pane", num - 2);
+@@ -2657,33 +2519,29 @@ static void on_dual_pane(GtkToggleAction* act, FmMainWin* win)
+     fm_tab_page_set_passive_view(win->current_page, fv,
+                                  win->passive_view_on_right);
+     /* ok, passive view was just changed, we have to update the button */
+-        gtk_widget_set_state(GTK_WIDGET(FM_TAB_PAGE(page)->tab_label), GTK_STATE_SELECTED);
++    gtk_widget_set_state(GTK_WIDGET(FM_TAB_PAGE(page)->tab_label),
++                         GTK_STATE_SELECTED);
+     win->enable_passive_view = TRUE;
+-    }
+-    else if (!active && win->enable_passive_view)
+-    {
++  } else if (!active && win->enable_passive_view) {
+     /* take passive pane back to the tab page */
+     fv = fm_tab_page_get_passive_view(win->current_page);
+-        if (fv)
+-        {
++    if (fv) {
+       FmTabPage *tp = _find_tab_page(win, fv);
+-            if (tp)
+-            {
++      if (tp) {
+         fm_tab_page_take_view_back(tp);
+-                gtk_widget_set_state(GTK_WIDGET(FM_TAB_PAGE(tp)->tab_label), GTK_STATE_ACTIVE);
++        gtk_widget_set_state(GTK_WIDGET(FM_TAB_PAGE(tp)->tab_label),
++                             GTK_STATE_ACTIVE);
+       }
+     }
+     win->enable_passive_view = FALSE;
+   }
+ }
+ 
+-static void on_show_status(GtkToggleAction *action, FmMainWin *win)
+-{
++static void on_show_status(GtkToggleAction *action, FmMainWin *win) {
+   gboolean active;
+ 
+   active = gtk_toggle_action_get_active(action);
+-    if (active != app_config->show_statusbar)
+-    {
++  if (active != app_config->show_statusbar) {
+     app_config->show_statusbar = active;
+     fm_config_emit_changed(fm_config, "statusbar");
+     pcmanfm_save_config(FALSE);

@@ -1,0 +1,33 @@
+#!/bin/bash
+
+current=$(asusctl profile get | grep "Active" | grep -oE 'Quiet|Balanced|Performance')
+
+case "$current" in
+    Quiet)
+        asusctl profile set Balanced
+        brightnessctl set 100%
+        xrandr --output eDP-1 --mode 1920x1080 --rate 144
+        sleep 0.5
+        pgrep picom || picom --vsync --backend glx &
+        msg="Balanced"
+        ;;
+    Balanced)
+        asusctl profile set Performance
+        brightnessctl set 100%
+        xrandr --output eDP-1 --mode 1920x1080 --rate 144
+        sleep 0.5
+        pgrep picom || picom --vsync --backend glx &
+        msg="Performance"
+        ;;
+    Performance)
+        asusctl profile set Quiet
+        pkill picom
+        sleep 0.5
+        brightnessctl set 80%
+        xrandr --output eDP-1 --mode 1920x1080 --rate 60
+        msg="Quiet"
+        ;;
+esac
+
+pkill herbe
+herbe "$msg" &
