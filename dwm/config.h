@@ -65,6 +65,7 @@ static const char *vol_up[]   = { "pactl", "set-sink-volume", "@DEFAULT_SINK@", 
 static const char *vol_down[] = { "pactl", "set-sink-volume", "@DEFAULT_SINK@", "-5%", NULL };
 static const char *vol_mute[] = { "pactl", "set-sink-mute",   "@DEFAULT_SINK@", "toggle", NULL };
 static const char *powertoggle[] = { "/home/dmitry/.local/bin/power-toggle", NULL };
+static const char *lockcmd[] = { "/home/dmitry/.local/bin/lock.sh", NULL };
 
 /* screenshot: area selection → clipboard + file */
 static const char *screenshot[]  = { "sh", "-c",
@@ -103,6 +104,7 @@ static const Key keys[] = {
         { 0, XF86XK_AudioLowerVolume,  spawn, {.v = vol_down} },
         { 0, XF86XK_AudioMute,         spawn, {.v = vol_mute} },
         { MODKEY, XK_F5, spawn, {.v = powertoggle } },
+        { MODKEY|ShiftMask, XK_l, spawn, {.v = lockcmd } },
         { MODKEY,                       XK_e,      spawn,          {.v = filecmd } },
 	TAGKEYS(                        XK_1,                      0)
 	TAGKEYS(                        XK_2,                      1)
