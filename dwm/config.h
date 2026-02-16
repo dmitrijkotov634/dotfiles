@@ -75,6 +75,7 @@ static const char *vol_down[] = { "pactl", "set-sink-volume", "@DEFAULT_SINK@", 
 static const char *vol_mute[] = { "pactl", "set-sink-mute",   "@DEFAULT_SINK@", "toggle", NULL };
 static const char *powertoggle[] = { "/home/dmitry/.local/bin/power-toggle", NULL };
 static const char *lockcmd[] = { "/home/dmitry/.local/bin/lock", NULL };
+static const char *clipmenucmd[] = { "clipmenu", NULL };
 
 /* screenshot: area selection → clipboard + file */
 static const char *screenshot[]  = { "sh", "-c",
@@ -116,6 +117,7 @@ static const Key keys[] = {
         { MODKEY|ShiftMask, XK_l, spawn, {.v = lockcmd } },
         { MODKEY,                       XK_e,      spawn,          {.v = filecmd } },
         { MODKEY|ShiftMask,             XK_t,      togglealwaysontop, {0} },
+        { MODKEY, XK_v, spawn, {.v = clipmenucmd } },
 	TAGKEYS(                        XK_1,                      0)
 	TAGKEYS(                        XK_2,                      1)
 	TAGKEYS(                        XK_3,                      2)

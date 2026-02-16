@@ -6,4 +6,6 @@ xwallpaper --zoom ~/wallpaper.jpg &
 dwmbar &
 /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 &
 ~/.local/bin/lock-startup &
+export CM_LAUNCHER=rofi
+clipmenud &
 exec dwm
