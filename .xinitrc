@@ -5,5 +5,5 @@ xwallpaper --zoom ~/wallpaper.jpg &
 (sleep 3 && picom --vsync --backend glx) &
 dwmbar &
 /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 &
-~/.local/bin/lock-startup.sh &
+~/.local/bin/lock-startup &
 exec dwm

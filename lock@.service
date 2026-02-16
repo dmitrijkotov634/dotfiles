@@ -6,7 +6,7 @@ Before=sleep.target
 User=%i
 Type=simple
 Environment=DISPLAY=:0
-ExecStart=/home/dmitry/.local/bin/lock.sh
+ExecStart=/home/dmitry/.local/bin/lock
 
 [Install]
 WantedBy=sleep.target

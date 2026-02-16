@@ -68,7 +68,7 @@ static const char *vol_up[]   = { "pactl", "set-sink-volume", "@DEFAULT_SINK@", 
 static const char *vol_down[] = { "pactl", "set-sink-volume", "@DEFAULT_SINK@", "-5%", NULL };
 static const char *vol_mute[] = { "pactl", "set-sink-mute",   "@DEFAULT_SINK@", "toggle", NULL };
 static const char *powertoggle[] = { "/home/dmitry/.local/bin/power-toggle", NULL };
-static const char *lockcmd[] = { "/home/dmitry/.local/bin/lock.sh", NULL };
+static const char *lockcmd[] = { "/home/dmitry/.local/bin/lock", NULL };
 
 /* screenshot: area selection → clipboard + file */
 static const char *screenshot[]  = { "sh", "-c",
