@@ -1,0 +1,113 @@
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+  "logo": {
+    "type": "small",
+    "padding": {
+      "top": 1,
+      "left": 2
+    }
+  },
+  "display": {
+    "separator": " : ",
+    "color": {
+      "keys": "blue",
+      "title": "cyan"
+    }
+  },
+  "modules": [
+    {
+      "type": "title",
+      "format": "{user-name-colored}@{host-name-colored}"
+    },
+    {
+      "type": "separator",
+      "string": "─────────────────────────────────"
+    },
+    {
+      "type": "os",
+      "key": "\uf303  OS",
+      "keyColor": "blue"
+    },
+    {
+      "type": "kernel",
+      "key": "\uf17c  Kernel",
+      "keyColor": "blue"
+    },
+    {
+      "type": "packages",
+      "key": "\uf487  Packages",
+      "keyColor": "blue"
+    },
+    {
+      "type": "shell",
+      "key": "\uf489  Shell",
+      "keyColor": "blue"
+    },
+    {
+      "type": "wm",
+      "key": "\uf2d0  WM",
+      "keyColor": "blue"
+    },
+    {
+      "type": "terminal",
+      "key": "\uf120  Terminal",
+      "keyColor": "blue"
+    },
+    {
+      "type": "separator",
+      "string": "─────────────────────────────────"
+    },
+    {
+      "type": "host",
+      "key": "\uf109  Host",
+      "keyColor": "cyan"
+    },
+    {
+      "type": "cpu",
+      "key": "\uf2db  CPU",
+      "keyColor": "cyan"
+    },
+    {
+      "type": "gpu",
+      "key": "\uf26c  GPU",
+      "keyColor": "cyan"
+    },
+    {
+      "type": "display",
+      "key": "\uf108  Display",
+      "keyColor": "cyan"
+    },
+    {
+      "type": "memory",
+      "key": "\uf1c0  RAM",
+      "keyColor": "cyan"
+    },
+    {
+      "type": "disk",
+      "key": "\uf0a0  Disk",
+      "keyColor": "cyan"
+    },
+    {
+      "type": "battery",
+      "key": "\uf240  Battery",
+      "keyColor": "cyan"
+    },
+    {
+      "type": "separator",
+      "string": "─────────────────────────────────"
+    },
+    {
+      "type": "uptime",
+      "key": "\uf017  Uptime",
+      "keyColor": "green"
+    },
+    {
+      "type": "separator",
+      "string": "─────────────────────────────────"
+    },
+    {
+      "type": "colors",
+      "symbol": "circle"
+    }
+  ]
+}
