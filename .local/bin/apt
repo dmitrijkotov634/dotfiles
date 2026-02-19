@@ -1,0 +1,109 @@
+#!/bin/bash
+
+set -euo pipefail
+
+ASSUME_YES=0
+ARGS=()
+
+for arg in "$@"; do
+    case "$arg" in
+        -y|--yes|--assume-yes) ASSUME_YES=1 ;;
+        -h|--help)
+            /usr/bin/pacman -h
+            exit 0
+            ;;
+        -v|--version)
+            echo "apt 2.7.14 (arch64)"
+            exit 0
+            ;;
+        *) ARGS+=("$arg") ;;
+    esac
+done
+
+set -- "${ARGS[@]+"${ARGS[@]}"}"
+
+[[ $# -eq 0 ]] && { /usr/bin/pacman -h; exit 1; }
+
+CMD="$1"
+shift
+
+PACMAN_YES=""
+[[ $ASSUME_YES -eq 1 ]] && PACMAN_YES="--noconfirm"
+
+case "$CMD" in
+    install)
+        sudo pacman -S $PACMAN_YES "$@"
+        ;;
+    reinstall)
+        sudo pacman -S $PACMAN_YES --needed "$@"
+        ;;
+    remove)
+        sudo pacman -R $PACMAN_YES "$@"
+        ;;
+    purge)
+        sudo pacman -Rns $PACMAN_YES "$@"
+        ;;
+    update)
+        sudo pacman -Sy $PACMAN_YES
+        ;;
+    upgrade|full-upgrade|dist-upgrade)
+        sudo pacman -Syu $PACMAN_YES
+        ;;
+    search)
+        pacman -Ss "$@"
+        ;;
+    show|info)
+        pacman -Si "$@" 2>/dev/null || pacman -Qi "$@"
+        ;;
+    list)
+        case "${1:-}" in
+            --installed) pacman -Q ;;
+            --upgradable) pacman -Qu ;;
+            *) pacman -Sl "$@" ;;
+        esac
+        ;;
+    autoremove)
+        orphans=$(pacman -Qdtq 2>/dev/null || true)
+        if [[ -n "$orphans" ]]; then
+            sudo pacman -Rns $PACMAN_YES $orphans
+        else
+            echo "0 packages to remove."
+        fi
+        ;;
+    clean|autoclean)
+        sudo pacman -Sc $PACMAN_YES
+        ;;
+    edit-sources)
+        sudo "${EDITOR:-vim}" /etc/pacman.conf
+        ;;
+    policy)
+        if [[ $# -gt 0 ]]; then
+            pacman -Si "$@" 2>/dev/null | grep -E "^(Repository|Name|Version)"
+        else
+            grep -E "^\[.*\]" /etc/pacman.conf | grep -v options
+        fi
+        ;;
+    depends)
+        pacman -Si "$@" 2>/dev/null | grep -E "^Depends On"
+        ;;
+    rdepends)
+        pacman -Sii "$@" 2>/dev/null | grep -E "^Required By"
+        ;;
+    download)
+        sudo pacman -Sw $PACMAN_YES "$@"
+        ;;
+    source)
+        asp export "$@" 2>/dev/null || echo "Install asp: pacman -S asp"
+        ;;
+    mark)
+        case "${1:-}" in
+            auto) shift; sudo pacman -D --asdeps "$@" ;;
+            manual) shift; sudo pacman -D --asexplicit "$@" ;;
+            *) echo "Usage: apt mark {auto|manual} <pkg>" ;;
+        esac
+        ;;
+    *)
+        echo "E: Invalid operation $CMD" >&2
+        exit 1
+        ;;
+esac
