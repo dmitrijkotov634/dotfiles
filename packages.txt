@@ -1,0 +1,127 @@
+# Build tools
+base-devel
+git
+
+# Xorg
+xorg-server
+xorg-xinit
+xorg-xrandr
+xorg-xsetroot
+xorg-xinput
+xorg-setxkbmap
+
+# dwm / dwmbar build deps
+libx11
+libxinerama
+libxft
+freetype2
+fontconfig
+libpulse
+
+# pcmanfm build deps
+gtk3
+glib2
+gdk-pixbuf2
+cairo
+pango
+libfm
+libfm-gtk3
+at-spi2-core
+lxmenu-data
+intltool
+
+# pcmanfm extras
+gvfs
+gvfs-mtp
+xarchiver
+
+# mousepad build deps
+gtksourceview4
+desktop-file-utils
+hicolor-icon-theme
+glib2-devel
+gspell
+libxfce4ui
+meson
+polkit
+xfce4-dev-tools
+
+# Audio
+pipewire
+pipewire-pulse
+wireplumber
+rtkit
+pamixer
+pavucontrol
+
+# Network
+networkmanager
+wireless_tools
+
+# Bluetooth
+bluez
+bluez-utils
+bluetui
+
+# Terminal
+alacritty
+
+# Launcher
+rofi
+dmenu
+
+# Compositor
+picom
+
+# Desktop
+feh
+xwallpaper
+xclip
+clipmenu
+maim
+polkit-gnome
+
+# Shell
+zsh
+zsh-autosuggestions
+zsh-syntax-highlighting
+
+# CLI tools
+neovim
+btop
+fzf
+ripgrep
+fd
+lazygit
+fastfetch
+
+# Utilities
+brightnessctl
+wget
+unzip
+zip
+7zip
+man-db
+openssh
+
+# Apps
+firefox
+mpv
+
+# Fonts
+noto-fonts
+noto-fonts-emoji
+ttf-fira-code
+ttf-firacode-nerd
+ttf-jetbrains-mono
+ttf-jetbrains-mono-nerd
+
+# AUR
+# yay
+# i3lock-color
+# asusctl
+# herbe
+# xwinwrap-git
+# bat-asus-battery-bin
+# xkb-switch
+# ttf-symbola
