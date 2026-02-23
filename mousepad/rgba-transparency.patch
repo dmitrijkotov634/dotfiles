@@ -1,0 +1,32 @@
+diff --git a/mousepad/mousepad-window.c b/mousepad/mousepad-window.c
+index bc0e6047..cbb41334 100644
+--- a/mousepad/mousepad-window.c
++++ b/mousepad/mousepad-window.c
+@@ -1269,11 +1269,27 @@ mousepad_window_create_statusbar (MousepadWindow *window)
+ 
+ 
+ 
++static void
++mousepad_window_screen_changed (GtkWidget *widget, GdkScreen *old_screen, gpointer userdata)
++{
++  GdkScreen *screen = gtk_widget_get_screen (widget);
++  GdkVisual *visual = gdk_screen_get_rgba_visual (screen);
++  if (visual)
++    gtk_widget_set_visual (widget, visual);
++}
++
++
++
+ static void
+ mousepad_window_init (MousepadWindow *window)
+ {
+   GAction *action;
+ 
++  /* set RGBA visual for transparency support */
++  g_signal_connect (window, "screen-changed",
++                    G_CALLBACK (mousepad_window_screen_changed), NULL);
++  mousepad_window_screen_changed (GTK_WIDGET (window), NULL, NULL);
++
+   /* initialize stuff */
+   window->active = NULL;
+   window->previous = NULL;

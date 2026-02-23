@@ -1,0 +1,5 @@
+#!/bin/sh
+f=/tmp/ocr_$(date +%s).txt
+maim -s /tmp/ss_ocr.png 2>/dev/null || exit 1
+tesseract /tmp/ss_ocr.png stdout -l eng 2>/dev/null > "$f"
+mousepad "$f" &

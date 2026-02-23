@@ -35,12 +35,13 @@ static const char *colors[][3]      = {
 static const char *tags[] = { "\uf0ac", "\uf120", "\uf07b", "\uf075", "\uf11b", "\uf044", "\uf013" };
 
 static const Rule rules[] = {
-	/* class      instance    title                  tags mask     isfloating   monitor */
-	{ "Gimp",     NULL,       NULL,                  0,            1,           -1 },
-	{ "Firefox",  NULL,       NULL,                  1 << 0,       0,           -1 },
-        { NULL,       "Toolkit", "Picture-in-Picture",   ~0,           1,           -1 },
-        { "mpv",      NULL,       NULL,                  0,            1,           -1 },
-	{ "v2rayN",   NULL,       NULL,                  1 << 6,       0,           -1 }
+    /* class                instance    title                tags mask   isfloating  monitor */
+    { "Gimp",              NULL,       NULL,                0,          1,          -1 },
+    { "Firefox",           NULL,       NULL,                1 << 0,     0,          -1 },
+    { NULL,                "Toolkit",  "Picture-in-Picture", ~0,        1,          -1 },
+    { "mpv",               NULL,       NULL,                0,          1,          -1 },
+    { "v2rayN",            NULL,       NULL,                1 << 6,     0,          -1 },
+    { "Org.xfce.mousepad", NULL,       NULL,                0,          1,          -1 },
 };
 
 /* layout(s) */
@@ -76,17 +77,23 @@ static const char *vol_mute[] = { "pactl", "set-sink-mute",   "@DEFAULT_SINK@", 
 static const char *powertoggle[] = { "/home/dmitry/.local/bin/power-toggle", NULL };
 static const char *lockcmd[] = { "/home/dmitry/.local/bin/lock", NULL };
 static const char *clipmenucmd[] = { "clipmenu", NULL };
+static const char *pavucontrolcmd[] = { "pavucontrol", NULL };
 
 /* screenshot: area selection → clipboard + file */
 static const char *screenshot[]  = { "sh", "-c",
 	"maim -s | tee ~/screenshots/$(date +%Y%m%d_%H%M%S).png | xclip -selection clipboard -t image/png",
 	NULL };
 
+static const char *ocr[]    = { "sh", "-c", "ocr", NULL };
+static const char *ocr_tr[] = { "sh", "-c", "ocr_translate", NULL };
+
 static const Key keys[] = {
 	/* modifier                     key        function        argument */
 	{ MODKEY,                       XK_p,      spawn,          {.v = dmenucmd } },
 	{ MODKEY|ShiftMask,             XK_Return, spawn,          {.v = termcmd } },
 	{ 0,                            XK_Print,  spawn,          {.v = screenshot } },
+        { ShiftMask, XK_Print, spawn, {.v = ocr } },
+        { Mod1Mask,  XK_Print, spawn, {.v = ocr_tr } },
 	{ MODKEY,                       XK_b,      togglebar,      {0} },
 	{ MODKEY,                       XK_j,      focusstack,     {.i = +1 } },
 	{ MODKEY,                       XK_k,      focusstack,     {.i = -1 } },
@@ -118,6 +125,7 @@ static const Key keys[] = {
         { MODKEY,                       XK_e,      spawn,          {.v = filecmd } },
         { MODKEY|ShiftMask,             XK_t,      togglealwaysontop, {0} },
         { MODKEY, XK_v, spawn, {.v = clipmenucmd } },
+        { MODKEY, XK_q, spawn, {.v = pavucontrolcmd } },
 	TAGKEYS(                        XK_1,                      0)
 	TAGKEYS(                        XK_2,                      1)
 	TAGKEYS(                        XK_3,                      2)
