@@ -2,10 +2,6 @@
 f=/tmp/ocr_tr_$(date +%s).txt
 maim -s /tmp/ss_raw.png || exit 1
 text=$(tesseract /tmp/ss_raw.png stdout -l eng 2>/dev/null)
-echo "=== ORIGINAL ===" > "$f"
-echo "$text" >> "$f"
-echo "" >> "$f"
-echo "=== TRANSLATED ===" >> "$f"
 python3 -c "
 from deep_translator import GoogleTranslator
 print(GoogleTranslator(source='en',target='ru').translate('''$text'''))
